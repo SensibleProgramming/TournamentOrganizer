@@ -123,9 +123,7 @@ public class CommanderStatsTests
     {
         var playerRepo = new FakePlayerRepository();
         var gameRepo   = new FakeGameRepository();
-        playerRepo.Add(MakePlayer(1));
-
-        gameRepo.AddResult(MakeResult(1, 2, null)); // no commander recorded on the game result
+        playerRepo.Add(MakePlayer(1));      
 
         var svc = BuildService(playerRepo, gameRepo);
         var result = await svc.GetCommanderStatsAsync(1);
