@@ -483,6 +483,11 @@ export class EventDetailComponent implements OnInit {
 
   ngOnInit() {
     this.eventId = Number(this.route.snapshot.paramMap.get('id'));
+    if (this.eventId < 0) {
+      this.snackBar.open('This event was created offline and has not yet synced to the server.', 'OK', { duration: 5000 });
+      this.router.navigate(['/events']);
+      return;
+    }
     this.initSubscriptions();
     this.loadData();
   }
