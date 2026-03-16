@@ -329,7 +329,7 @@ describe('PlayerProfileComponent — Avatar', () => {
         provideRouter([]),
         provideAnimationsAsync(),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
-        { provide: PlayerService, useValue: { getProfile: jest.fn().mockReturnValue(of(profile)), updatePlayer: jest.fn().mockReturnValue(of(profile)) } },
+        { provide: PlayerService, useValue: { getProfile: jest.fn().mockReturnValue(of(profile)), updatePlayer: jest.fn().mockReturnValue(of(profile)), loadAllPlayers: jest.fn() } },
         { provide: ApiService, useValue: mockApi },
         { provide: LocalStorageContext, useValue: { players: { getById: jest.fn(), getAll: jest.fn().mockReturnValue([]) } } },
         { provide: AuthService, useValue: auth },

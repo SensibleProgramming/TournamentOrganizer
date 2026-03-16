@@ -521,6 +521,7 @@ export class PlayerProfileComponent implements OnInit {
         this.profile!.avatarUrl = dto.avatarUrl ? `${dto.avatarUrl}?t=${Date.now()}` : null;
         this.uploadingAvatar = false;
         this.snackBar.open('Avatar updated.', 'Close', { duration: 3000 });
+        this.playerService.loadAllPlayers();
         this.cdr.detectChanges();
       },
       error: () => {
@@ -537,6 +538,7 @@ export class PlayerProfileComponent implements OnInit {
       next: (dto) => {
         this.profile!.avatarUrl = dto.avatarUrl ?? null;
         this.snackBar.open('Avatar removed.', 'Close', { duration: 3000 });
+        this.playerService.loadAllPlayers();
         this.cdr.detectChanges();
       },
       error: () => {
