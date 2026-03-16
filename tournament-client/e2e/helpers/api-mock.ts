@@ -370,6 +370,28 @@ export async function mockGetCommanderMeta(
   });
 }
 
+/** Intercept POST /api/players/:id/avatar → returns PlayerDto */
+export async function mockUploadPlayerAvatar(page: Page, playerId: number, response: PlayerDto): Promise<void> {
+  await page.route(`**/api/players/${playerId}/avatar`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+/** Intercept DELETE /api/players/:id/avatar → returns PlayerDto */
+export async function mockRemovePlayerAvatar(page: Page, playerId: number, response: PlayerDto): Promise<void> {
+  await page.route(`**/api/players/${playerId}/avatar`, route => {
+    if (route.request().method() === 'DELETE') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
 /** Intercept POST /api/stores/:id/discord/test → 204 */
 export async function mockTestDiscordWebhook(page: Page, storeId: number): Promise<void> {
   await page.route(`**/api/stores/${storeId}/discord/test`, route => {

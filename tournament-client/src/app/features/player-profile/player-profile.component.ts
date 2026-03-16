@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatDialog } from '@angular/material/dialog';
 import { CardDemandDialogComponent } from './dialogs/card-demand-dialog.component';
@@ -28,10 +29,44 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatTableModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSnackBarModule, MatTooltipModule, MatPaginatorModule,
+    MatProgressSpinnerModule,
     RatingBadgeComponent, PlacementBadgeComponent
   ],
   template: `
     @if (profile) {
+      <div class="avatar-section">
+        @if (profile.avatarUrl) {
+          <img [src]="profile.avatarUrl" alt="Avatar" class="player-avatar" />
+        } @else {
+          <div class="player-avatar player-avatar-placeholder">
+            <mat-icon>person</mat-icon>
+          </div>
+        }
+        @if (canManageAvatar) {
+          <div class="avatar-actions">
+            <button mat-icon-button
+                    matTooltip="Upload avatar"
+                    (click)="avatarInput.click()"
+                    [disabled]="uploadingAvatar">
+              <mat-icon>upload</mat-icon>
+            </button>
+            <input #avatarInput
+                   type="file"
+                   accept=".png,.jpg,.jpeg,.gif,.webp"
+                   style="display:none"
+                   (change)="onAvatarFileSelected($event)" />
+            @if (profile.avatarUrl) {
+              <button mat-icon-button
+                      matTooltip="Remove avatar"
+                      color="warn"
+                      (click)="removeAvatar()">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
       <div class="profile-header">
         @if (isEditing) {
           <div class="edit-form">
@@ -374,6 +409,11 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     }
   `,
   styles: [`
+    .avatar-section { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .player-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 2px solid var(--mat-sys-outline-variant, #ccc); }
+    .player-avatar-placeholder { display: flex; align-items: center; justify-content: center; background: var(--mat-sys-surface-variant, #e0e0e0); }
+    .player-avatar-placeholder mat-icon { font-size: 48px; width: 48px; height: 48px; }
+    .avatar-actions { display: flex; gap: 4px; }
     .profile-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
     .name-row { display: flex; align-items: center; justify-content: space-between; }
     .name-row h2 { margin: 0; }
@@ -435,6 +475,8 @@ export class PlayerProfileComponent implements OnInit {
       : ['demand', 'cardName', 'quantity', 'price'];
   }
 
+  uploadingAvatar = false;
+
   apiOnline = true;
   isEditing = false;
   editName = '';
@@ -463,11 +505,55 @@ export class PlayerProfileComponent implements OnInit {
     return user.playerId === this.profile?.id;
   }
 
+  get canManageAvatar(): boolean {
+    if (this.authService.isAdmin) return true;
+    if (this.authService.isStoreManager) return true;
+    return this.authService.currentUser?.email === this.profile?.email;
+  }
+
+  onAvatarFileSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file || !this.profile) return;
+    this.uploadingAvatar = true;
+    this.cdr.detectChanges();
+    this.apiService.uploadPlayerAvatar(this.profile.id, file).subscribe({
+      next: (dto) => {
+        this.profile!.avatarUrl = dto.avatarUrl ? `${dto.avatarUrl}?t=${Date.now()}` : null;
+        this.uploadingAvatar = false;
+        this.snackBar.open('Avatar updated.', 'Close', { duration: 3000 });
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.uploadingAvatar = false;
+        this.snackBar.open('Upload failed. Check file type and size.', 'Close', { duration: 4000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  removeAvatar(): void {
+    if (!this.profile) return;
+    this.apiService.removePlayerAvatar(this.profile.id).subscribe({
+      next: (dto) => {
+        this.profile!.avatarUrl = dto.avatarUrl ?? null;
+        this.snackBar.open('Avatar removed.', 'Close', { duration: 3000 });
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.snackBar.open('Failed to remove avatar.', 'Close', { duration: 4000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.playerService.getProfile(id).subscribe({
       next: p => {
         p.eventRegistrations.sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
+        if (p.avatarUrl && !p.avatarUrl.includes('?t=')) {
+          p.avatarUrl = `${p.avatarUrl}?t=${Date.now()}`;
+        }
         this.profile = p;
         this.cdr.detectChanges();
         this.loadWishlist(id);
@@ -483,10 +569,10 @@ export class PlayerProfileComponent implements OnInit {
         const cached = this.ctx.players.getById(id);
         if (cached) {
           this.profile = { ...cached, gameHistory: [], eventRegistrations: [] };
-          this.cdr.detectChanges();
         } else {
           this.snackBar.open('Player profile unavailable offline', 'OK', { duration: 3000 });
         }
+        this.cdr.detectChanges();
       }
     });
   }

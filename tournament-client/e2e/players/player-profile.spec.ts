@@ -4,6 +4,8 @@ import {
   stubUnmatchedApi,
   mockGetPlayerProfile,
   mockGetCommanderStats,
+  mockUploadPlayerAvatar,
+  mockRemovePlayerAvatar,
   makePlayerProfile,
   makePlayerDto,
   makeCommanderStatDto,
@@ -153,5 +155,147 @@ test.describe('Player Profile — Commander Stats: zero games guard', () => {
   test('shows 0.0% not NaN when gamesPlayed is 0', async ({ page }) => {
     await expect(page.getByText('0.0%')).toBeVisible();
     await expect(page.getByText('NaN')).not.toBeVisible();
+  });
+});
+
+// ── Avatar ─────────────────────────────────────────────────────────────────────
+
+test.describe('Player Profile — avatar: display', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, avatarUrl: '/avatars/1.png' }));
+    await loginAs(page, 'Player');
+    await page.goto('/players/1');
+  });
+
+  test('img.player-avatar is visible with correct src', async ({ page }) => {
+    const img = page.locator('img.player-avatar');
+    await expect(img).toBeVisible();
+    await expect(img).toHaveAttribute('src', /\/avatars\/1\.png/);
+  });
+
+  test('placeholder is absent when avatarUrl is set', async ({ page }) => {
+    await expect(page.locator('div.player-avatar-placeholder')).not.toBeVisible();
+  });
+});
+
+test.describe('Player Profile — avatar: placeholder', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, avatarUrl: null }));
+    await loginAs(page, 'Player');
+    await page.goto('/players/1');
+  });
+
+  test('div.player-avatar-placeholder is visible', async ({ page }) => {
+    await expect(page.locator('div.player-avatar-placeholder')).toBeVisible();
+  });
+
+  test('img.player-avatar is absent', async ({ page }) => {
+    await expect(page.locator('img.player-avatar')).not.toBeVisible();
+  });
+});
+
+test.describe('Player Profile — avatar: upload (own player)', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, email: 'alice@test.com', avatarUrl: null }));
+    await mockUploadPlayerAvatar(page, 1, makePlayerDto({ id: 1, avatarUrl: '/avatars/1.png' }));
+    await loginAs(page, 'Player', { id: 1, playerId: 1 });
+    // Inject matching email so canManageAvatar returns true
+    await page.addInitScript(() => {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        const parts = token.split('.');
+        const payload = JSON.parse(atob(parts[1]));
+        payload.email = 'alice@test.com';
+        parts[1] = btoa(JSON.stringify(payload));
+        localStorage.setItem('auth_token', parts.join('.'));
+      }
+    });
+    await page.goto('/players/1');
+  });
+
+  test('upload button is visible for own player', async ({ page }) => {
+    await expect(page.locator('button[ng-reflect-message="Upload avatar"], button[mattooltip="Upload avatar"]').first()).toBeVisible();
+  });
+
+  test('hidden file input is present', async ({ page }) => {
+    await expect(page.locator('input[type="file"][accept=".png,.jpg,.jpeg,.gif,.webp"]')).toBeAttached();
+  });
+});
+
+test.describe('Player Profile — avatar: upload (StoreManager)', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, avatarUrl: null }));
+    await mockUploadPlayerAvatar(page, 1, makePlayerDto({ id: 1, avatarUrl: '/avatars/1.png' }));
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await page.goto('/players/1');
+  });
+
+  test('upload button visible for StoreManager', async ({ page }) => {
+    await expect(page.locator('.avatar-actions')).toBeVisible();
+  });
+});
+
+test.describe('Player Profile — avatar: upload (Admin)', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, avatarUrl: null }));
+    await loginAs(page, 'Administrator');
+    await page.goto('/players/1');
+  });
+
+  test('upload button visible for Administrator', async ({ page }) => {
+    await expect(page.locator('.avatar-actions')).toBeVisible();
+  });
+});
+
+test.describe('Player Profile — avatar: role gate', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, email: 'alice@test.com', avatarUrl: '/avatars/1.png' }));
+    await loginAs(page, 'Player', { id: 2, playerId: 2 });
+    await page.goto('/players/1');
+  });
+
+  test('upload button NOT visible for different player', async ({ page }) => {
+    await expect(page.locator('.avatar-actions')).not.toBeVisible();
+  });
+
+  test('remove button NOT visible for different player', async ({ page }) => {
+    await expect(page.locator('.avatar-actions')).not.toBeVisible();
+  });
+});
+
+test.describe('Player Profile — avatar: remove', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, avatarUrl: '/avatars/1.png' }));
+    await mockRemovePlayerAvatar(page, 1, makePlayerDto({ id: 1, avatarUrl: null }));
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await page.goto('/players/1');
+  });
+
+  test('remove button is visible when avatarUrl is set', async ({ page }) => {
+    const btn = page.locator('button[ng-reflect-message="Remove avatar"], button[mattooltip="Remove avatar"]').first();
+    await expect(btn).toBeVisible();
+  });
+
+  test('clicking remove fires DELETE and shows placeholder', async ({ page }) => {
+    let deleteCalled = false;
+    await page.route('**/api/players/1/avatar', route => {
+      if (route.request().method() === 'DELETE') {
+        deleteCalled = true;
+        route.fulfill({ json: makePlayerDto({ id: 1, avatarUrl: null }) });
+      } else {
+        route.continue();
+      }
+    });
+    const btn = page.locator('button[ng-reflect-message="Remove avatar"], button[mattooltip="Remove avatar"]').first();
+    await btn.click();
+    expect(deleteCalled).toBe(true);
+    await expect(page.locator('div.player-avatar-placeholder')).toBeVisible();
   });
 });

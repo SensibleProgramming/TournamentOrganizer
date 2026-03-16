@@ -153,6 +153,15 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wwwrootPath)
 });
+
+var avatarsPath = Path.Combine(wwwrootPath, "avatars");
+Directory.CreateDirectory(avatarsPath);
+app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(avatarsPath),
+    RequestPath  = "/avatars"
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
