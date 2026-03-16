@@ -30,6 +30,7 @@ export interface PlayerDto {
   isRanked: boolean;
   placementGamesLeft: number;
   isActive: boolean;
+  avatarUrl?: string | null;
 }
 
 export interface LeaderboardEntry {
@@ -53,6 +54,7 @@ export interface PlayerProfile {
   isActive: boolean;
   gameHistory: PlayerGameHistory[];
   eventRegistrations: PlayerEventRegistration[];
+  avatarUrl?: string | null;
 }
 
 export interface PlayerGameHistory {

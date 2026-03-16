@@ -23,8 +23,7 @@ import { PlayerDto } from '../../core/models/api.models';
   imports: [
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule,
-    MatTableModule, MatIconModule, MatSlideToggleModule, MatSnackBarModule,
-    MatPaginatorModule,
+    MatTableModule, MatIconModule, MatSlideToggleModule, MatSnackBarModule, MatPaginatorModule,
     PlacementBadgeComponent, RatingBadgeComponent
   ],
   template: `
@@ -77,6 +76,11 @@ import { PlayerDto } from '../../core/models/api.models';
                     <input matInput [(ngModel)]="editName">
                   </mat-form-field>
                 } @else {
+                  @if (avatarUrl(row)) {
+                    <img [src]="avatarUrl(row)!" class="avatar-thumb" [alt]="row.name" />
+                  } @else {
+                    <mat-icon class="avatar-thumb-icon">person</mat-icon>
+                  }
                   <a [routerLink]="['/players', row.id]">{{ row.name }}</a>
                 }
               </td>
@@ -144,6 +148,8 @@ import { PlayerDto } from '../../core/models/api.models';
     }
   `,
   styles: [`
+    .avatar-thumb      { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 8px; }
+    .avatar-thumb-icon { font-size: 32px; width: 32px; height: 32px; vertical-align: middle; margin-right: 8px; }
     .register-card { margin-bottom: 24px; }
     .table-card { margin-top: 16px; }
     .mat-column-rank { width: 40px; color: #888; font-size: 0.85rem; }
@@ -154,6 +160,14 @@ import { PlayerDto } from '../../core/models/api.models';
   `]
 })
 export class PlayersComponent implements OnInit, AfterViewInit {
+  private readonly sessionTs = Date.now();
+
+  avatarUrl(row: PlayerDto): string | null {
+    const url = row.avatarUrl;
+    if (!url) return null;
+    return url.includes('?t=') ? url : `${url}?t=${this.sessionTs}`;
+  }
+
   newName = '';
   newEmail = '';
   dataSource = new MatTableDataSource<PlayerDto>();

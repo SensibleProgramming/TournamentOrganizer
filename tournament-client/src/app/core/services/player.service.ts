@@ -26,10 +26,11 @@ export class PlayerService {
     const cached = this.ctx.players.getAll();
     if (cached.length > 0) {
       this.playersSubject.next(cached);
-      return;
     }
+    // Always background-refresh from API to pick up server-side changes
+    // (e.g. avatarUrl added after initial cache seed).
     this.api.getAllPlayers().pipe(
-      catchError(() => EMPTY)   // network unavailable — leave subject empty
+      catchError(() => EMPTY)   // network unavailable — keep showing cache
     ).subscribe(data => {
       this.ctx.players.seed(data);
       this.playersSubject.next(this.ctx.players.getAll());

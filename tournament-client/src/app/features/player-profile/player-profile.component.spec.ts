@@ -285,3 +285,163 @@ describe('PlayerProfileComponent — Commander Stats', () => {
     expect(fixture.nativeElement.textContent).toContain('0.0%');
   });
 });
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+
+describe('PlayerProfileComponent — Avatar', () => {
+  const PLAYER_ID = 1;
+
+  function makeProfile(avatarUrl: string | null = null): PlayerProfile {
+    return {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: false, placementGamesLeft: 5, isActive: true,
+      gameHistory: [], eventRegistrations: [],
+      avatarUrl,
+    };
+  }
+
+  function makeAuthService(opts: { isAdmin?: boolean; isStoreManager?: boolean; email?: string } = {}) {
+    return {
+      currentUser: opts.email ? { id: 1, email: opts.email, name: 'Test', role: 'Player' } : null,
+      isAdmin: opts.isAdmin ?? false,
+      isStoreManager: opts.isStoreManager ?? false,
+    };
+  }
+
+  function makeMockApi(uploadResult?: any) {
+    return {
+      getWishlist:          jest.fn().mockReturnValue(of([])),
+      getWishlistSupply:    jest.fn().mockReturnValue(of([])),
+      getTradeList:         jest.fn().mockReturnValue(of([])),
+      getSuggestedTrades:   jest.fn().mockReturnValue(of([])),
+      getTradeDemand:       jest.fn().mockReturnValue(of([])),
+      getCommanderStats:    jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+      uploadPlayerAvatar:   jest.fn().mockReturnValue(uploadResult ?? of({ id: PLAYER_ID, avatarUrl: '/avatars/1.png' })),
+      removePlayerAvatar:   jest.fn().mockReturnValue(of({ id: PLAYER_ID, avatarUrl: null })),
+    };
+  }
+
+  async function setup(profile: PlayerProfile, auth: ReturnType<typeof makeAuthService>, mockApi = makeMockApi()) {
+    await TestBed.configureTestingModule({
+      imports: [PlayerProfileComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
+        { provide: PlayerService, useValue: { getProfile: jest.fn().mockReturnValue(of(profile)), updatePlayer: jest.fn().mockReturnValue(of(profile)), refreshPlayersFromApi: jest.fn().mockReturnValue(of(undefined)) } },
+        { provide: ApiService, useValue: mockApi },
+        { provide: LocalStorageContext, useValue: { players: { getById: jest.fn(), getAll: jest.fn().mockReturnValue([]) } } },
+        { provide: AuthService, useValue: auth },
+        { provide: MatDialog, useValue: { open: jest.fn() } },
+        { provide: MatSnackBar, useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('renders img.player-avatar when avatarUrl is set', async () => {
+    await setup(makeProfile('/avatars/1.png'), makeAuthService());
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const img = fixture.nativeElement.querySelector('img.player-avatar');
+    expect(img).toBeTruthy();
+    expect(img.src).toContain('/avatars/1.png');
+  });
+
+  it('renders div.player-avatar-placeholder when avatarUrl is null', async () => {
+    await setup(makeProfile(null), makeAuthService());
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('div.player-avatar-placeholder')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('img.player-avatar')).toBeFalsy();
+  });
+
+  it('upload button visible when canManageAvatar (own player by email)', async () => {
+    await setup(makeProfile(), makeAuthService({ email: 'alice@test.com' }));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const btn = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('button'))
+      .find(b => b.getAttribute('mattooltip') === 'Upload avatar' || b.getAttribute('ng-reflect-message') === 'Upload avatar');
+    expect(btn).toBeTruthy();
+  });
+
+  it('upload button NOT visible for different player (Player role, different email)', async () => {
+    await setup(makeProfile(), makeAuthService({ email: 'other@test.com' }));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const avatarSection = fixture.nativeElement.querySelector('.avatar-actions');
+    expect(avatarSection).toBeFalsy();
+  });
+
+  it('upload button visible for StoreManager', async () => {
+    await setup(makeProfile(), makeAuthService({ isStoreManager: true }));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.avatar-actions')).toBeTruthy();
+  });
+
+  it('upload button visible for Admin', async () => {
+    await setup(makeProfile(), makeAuthService({ isAdmin: true }));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.avatar-actions')).toBeTruthy();
+  });
+
+  it('remove button visible when avatarUrl is set and canManageAvatar', async () => {
+    await setup(makeProfile('/avatars/1.png'), makeAuthService({ isAdmin: true }));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const btn = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('button'))
+      .find(b => b.getAttribute('mattooltip') === 'Remove avatar' || b.getAttribute('ng-reflect-message') === 'Remove avatar');
+    expect(btn).toBeTruthy();
+  });
+
+  it('remove button absent when avatarUrl is null', async () => {
+    await setup(makeProfile(null), makeAuthService({ isAdmin: true }));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const btn = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('button'))
+      .find(b => b.getAttribute('mattooltip') === 'Remove avatar' || b.getAttribute('ng-reflect-message') === 'Remove avatar');
+    expect(btn).toBeFalsy();
+  });
+
+  it('onAvatarFileSelected calls uploadPlayerAvatar and updates avatarUrl on success', async () => {
+    const mockApi = makeMockApi(of({ id: PLAYER_ID, avatarUrl: '/avatars/1.png?t=1' }));
+    await setup(makeProfile(), makeAuthService({ isAdmin: true }), mockApi);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+
+    const comp = fixture.componentInstance;
+    const file = new File(['data'], 'avatar.png', { type: 'image/png' });
+    const event = { target: { files: [file] } } as unknown as Event;
+    comp.onAvatarFileSelected(event);
+
+    expect(mockApi.uploadPlayerAvatar).toHaveBeenCalledWith(PLAYER_ID, file);
+    fixture.detectChanges();
+    expect(comp.profile?.avatarUrl).toContain('/avatars/1.png');
+  });
+
+  it('onAvatarFileSelected shows error snackbar on failure', async () => {
+    const mockApi = makeMockApi(throwError(() => new Error('upload failed')));
+    await setup(makeProfile(), makeAuthService({ isAdmin: true }), mockApi);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const snackBarSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
+    const file = new File(['data'], 'avatar.png', { type: 'image/png' });
+    fixture.componentInstance.onAvatarFileSelected({ target: { files: [file] } } as unknown as Event);
+    expect(snackBarSpy).toHaveBeenCalledWith(expect.stringContaining('failed'), 'Close', expect.anything());
+  });
+
+  it('removeAvatar calls removePlayerAvatar and clears avatarUrl on success', async () => {
+    const mockApi = makeMockApi();
+    await setup(makeProfile('/avatars/1.png'), makeAuthService({ isAdmin: true }), mockApi);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.removeAvatar();
+    expect(mockApi.removePlayerAvatar).toHaveBeenCalledWith(PLAYER_ID);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.profile?.avatarUrl).toBeNull();
+  });
+});

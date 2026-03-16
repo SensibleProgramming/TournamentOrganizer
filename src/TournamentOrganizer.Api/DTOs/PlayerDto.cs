@@ -4,7 +4,7 @@ public record CreatePlayerDto(string Name, string Email);
 
 public record UpdatePlayerDto(string Name, string Email, bool IsActive);
 
-public record PlayerDto(int Id, string Name, string Email, double Mu, double Sigma, double ConservativeScore, bool IsRanked, int PlacementGamesLeft, bool IsActive);
+public record PlayerDto(int Id, string Name, string Email, double Mu, double Sigma, double ConservativeScore, bool IsRanked, int PlacementGamesLeft, bool IsActive, string? AvatarUrl = null);
 
 public record LeaderboardEntryDto(int Rank, int PlayerId, string Name, double ConservativeScore, double Mu, double Sigma);
 
@@ -19,7 +19,8 @@ public record PlayerProfileDto(
     int PlacementGamesLeft,
     bool IsActive,
     List<PlayerGameHistoryDto> GameHistory,
-    List<PlayerEventRegistrationDto> EventRegistrations
+    List<PlayerEventRegistrationDto> EventRegistrations,
+    string? AvatarUrl = null
 );
 
 public record PlayerGameHistoryDto(

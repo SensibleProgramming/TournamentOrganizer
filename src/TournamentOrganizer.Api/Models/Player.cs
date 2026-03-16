@@ -12,6 +12,7 @@ public class Player
     public bool IsRanked => PlacementGamesLeft <= 0;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? AvatarUrl { get; set; }
 
     public ICollection<EventRegistration> EventRegistrations { get; set; } = new List<EventRegistration>();
     public ICollection<GameResult> GameResults { get; set; } = new List<GameResult>();

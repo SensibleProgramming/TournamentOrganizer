@@ -89,7 +89,8 @@ public class PlayerService : IPlayerService
                 er.DecklistUrl,
                 er.Commanders,
                 er.Event.StoreEvent?.Store.StoreName
-            )).ToList()
+            )).ToList(),
+            player.AvatarUrl
         );
     }
 
@@ -165,6 +166,31 @@ public class PlayerService : IPlayerService
         return new PlayerCommanderStatsDto(playerId, stats);
     }
 
+    public async Task<Player?> GetByIdAsync(int id)
+        => await _playerRepo.GetByIdAsync(id);
+
+    public async Task<PlayerDto> UpdateAvatarUrlAsync(int playerId, string? avatarUrl)
+    {
+        var player = await _playerRepo.GetByIdAsync(playerId)
+            ?? throw new KeyNotFoundException($"Player {playerId} not found.");
+        player.AvatarUrl = avatarUrl;
+        await _playerRepo.UpdateAsync(player);
+        return ToDto(player);
+    }
+
+    public async Task<bool> IsPlayerAtStoreAsync(int playerId, int storeId)
+    {
+        var registrations = await _playerRepo.GetPlayerEventRegistrationsAsync(playerId);
+        return registrations.Any(er => er.Event?.StoreEvent?.StoreId == storeId);
+    }
+
+    public async Task<bool> IsPlayerEmailAsync(int playerId, string? email)
+    {
+        if (email == null) return false;
+        var player = await _playerRepo.GetByIdAsync(playerId);
+        return player?.Email == email;
+    }
+
     private static PlayerDto ToDto(Player p) => new(
-        p.Id, p.Name, p.Email, p.Mu, p.Sigma, p.ConservativeScore, p.IsRanked, p.PlacementGamesLeft, p.IsActive);
+        p.Id, p.Name, p.Email, p.Mu, p.Sigma, p.ConservativeScore, p.IsRanked, p.PlacementGamesLeft, p.IsActive, p.AvatarUrl);
 }
