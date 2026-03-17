@@ -248,6 +248,7 @@ export interface StoreDetailDto {
   themeCssClass?: string | null;
   logoUrl?: string | null;
   hasDiscordWebhook?: boolean;
+  sellerPortalUrl?: string | null;
 }
 
 export interface CreateStoreDto {
@@ -259,6 +260,7 @@ export interface UpdateStoreDto {
   allowableTradeDifferential: number;
   themeId?: number | null;
   discordWebhookUrl?: string | null;
+  sellerPortalUrl?: string | null;
 }
 
 // Suggested Trades
@@ -437,6 +439,28 @@ export interface StandingsEntry {
   tiebreaker: number;
   finishPositions: number[];
   gameResults: string[];
+}
+
+// ── Scryfall ───────────────────────────────────────────────────────────────────
+
+export interface ScryfallCardImageUris {
+  normal: string;
+  large: string;
+}
+
+export interface ScryfallCard {
+  name: string;
+  image_uris?: ScryfallCardImageUris;
+  card_faces?: Array<{ image_uris?: ScryfallCardImageUris }>;
+  prices: {
+    usd: string | null;
+    usd_foil: string | null;
+  };
+  purchase_uris: {
+    tcgplayer?: string;
+    cardkingdom?: string;
+    cardmarket?: string;
+  };
 }
 
 // ── Bulk Register ──────────────────────────────────────────────────────────────

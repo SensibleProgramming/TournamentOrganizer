@@ -116,6 +116,16 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                         }
                       </mat-hint>
                     </mat-form-field>
+                    <mat-form-field>
+                      <mat-label>Seller Portal URL</mat-label>
+                      <input matInput
+                             type="url"
+                             placeholder="https://store.tcgplayer.com/..."
+                             [(ngModel)]="editSellerPortalUrl"
+                             autocomplete="off"
+                             aria-label="Seller Portal URL" />
+                      <mat-hint>Optional. Used as the buy link on card previews. Use &#123;q&#125; as a placeholder for the card name.</mat-hint>
+                    </mat-form-field>
                   }
                 </div>
               </mat-card-content>
@@ -415,6 +425,7 @@ export class StoreDetailComponent implements OnInit {
 
   // Discord
   editDiscordWebhookUrl = '';
+  editSellerPortalUrl = '';
 
   // License
   license: LicenseDto | null = null;
@@ -477,6 +488,7 @@ export class StoreDetailComponent implements OnInit {
         this.editStoreName = store.storeName;
         this.editDifferential = store.allowableTradeDifferential;
         this.selectedThemeId = store.themeId ?? null;
+        this.editSellerPortalUrl = store.sellerPortalUrl ?? '';
         if (store.license) {
           this.license = store.license;
           this.editLicenseKey = store.license.appKey;
@@ -522,7 +534,8 @@ export class StoreDetailComponent implements OnInit {
       storeName: this.editStoreName.trim(),
       allowableTradeDifferential: this.editDifferential,
       themeId: this.selectedThemeId,
-      discordWebhookUrl: this.editDiscordWebhookUrl || null
+      discordWebhookUrl: this.editDiscordWebhookUrl || null,
+      sellerPortalUrl: this.editSellerPortalUrl || null
     }).subscribe({
       next: updated => {
         this.store = updated.logoUrl
