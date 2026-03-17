@@ -7,6 +7,7 @@ using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -43,12 +44,33 @@ public class TournamentOrganizerFactory : WebApplicationFactory<Program>
             });
         });
 
-        // Replace SQL Server DbContext with InMemory
+        // Replace SQL Server DbContext with InMemory.
+        //
+        // Root-cause of the dual-provider conflict:
+        //   AddDbContext(...UseSqlServer) calls AddEntityFrameworkSqlServer(),
+        //   which injects SQL Server extension services into the ASP.NET DI
+        //   container. Our subsequent AddDbContext(...UseInMemoryDatabase) then
+        //   injects InMemory extension services. EF Core's internal provider
+        //   validation finds both and throws.
+        //
+        // Fix: use UseInternalServiceProvider to hand EF Core an isolated
+        //   ServiceProvider that contains ONLY InMemory services, completely
+        //   bypassing the ASP.NET DI container for EF Core internals.
         builder.ConfigureServices(services =>
         {
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
-            if (descriptor != null) services.Remove(descriptor);
+            // AddDbContext registers IDbContextOptionsConfiguration<AppDbContext>
+            // as a Singleton that applies the SQL Server action to EVERY options
+            // build — including our replacement.  We must remove it along with
+            // the three standard descriptors so it can't inject SQL Server
+            // extensions into our InMemory options at construction time.
+            var toRemove = services
+                .Where(d =>
+                    d.ServiceType == typeof(DbContextOptions<AppDbContext>) ||
+                    d.ServiceType == typeof(DbContextOptions) ||
+                    d.ServiceType == typeof(AppDbContext) ||
+                    d.ServiceType == typeof(IDbContextOptionsConfiguration<AppDbContext>))
+                .ToList();
+            foreach (var d in toRemove) services.Remove(d);
 
             services.AddDbContext<AppDbContext>(opts =>
                 opts.UseInMemoryDatabase("PolicyTestsDb"));
