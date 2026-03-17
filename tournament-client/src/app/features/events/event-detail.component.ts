@@ -15,10 +15,13 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import * as QRCode from 'qrcode';
 import { EventService } from '../../core/services/event.service';
 import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ScryfallService } from '../../core/services/scryfall.service';
 import {
   EventDto, RoundDto, StandingsEntry, EventPlayerDto, PlayerDto, POINT_SYSTEM_LABELS,
 } from '../../core/models/api.models';
@@ -153,7 +156,16 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                   </mat-form-field>
                   <mat-form-field>
                     <mat-label>Commander(s) (optional)</mat-label>
-                    <input matInput [(ngModel)]="commandersInput" placeholder="e.g. Atraxa, Praetors' Voice">
+                    <input matInput
+                           [(ngModel)]="commandersInput"
+                           [matAutocomplete]="commanderRegAuto"
+                           (ngModelChange)="onCommanderInputChange($event)"
+                           placeholder="e.g. Atraxa, Praetors' Voice">
+                    <mat-autocomplete #commanderRegAuto="matAutocomplete">
+                      @for (s of commanderSuggestions; track s) {
+                        <mat-option [value]="s">{{ s }}</mat-option>
+                      }
+                    </mat-autocomplete>
                   </mat-form-field>
                   <button mat-raised-button color="primary" (click)="registerPlayer()" [disabled]="!playerIdToRegister">
                     {{ isEventFull ? 'Add to Waitlist' : 'Register Player' }}
@@ -235,11 +247,20 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                         <td mat-cell *matCellDef="let row">
                           @if (editingCommanderPlayerId === row.playerId) {
                             <div class="commander-edit">
-                              <input matInput [(ngModel)]="editCommanderValue"
-                                     placeholder="Commander name"
-                                     class="commander-input"
-                                     (keyup.enter)="saveCommander(row)"
-                                     (keyup.escape)="cancelEditCommander()">
+                              <mat-form-field class="commander-inline-field">
+                                <input matInput
+                                       [(ngModel)]="editCommanderValue"
+                                       [matAutocomplete]="commanderEditAuto"
+                                       (ngModelChange)="onCommanderInputChange($event)"
+                                       placeholder="Commander name"
+                                       (keyup.enter)="saveCommander(row)"
+                                       (keyup.escape)="cancelEditCommander()">
+                                <mat-autocomplete #commanderEditAuto="matAutocomplete">
+                                  @for (s of commanderSuggestions; track s) {
+                                    <mat-option [value]="s">{{ s }}</mat-option>
+                                  }
+                                </mat-autocomplete>
+                              </mat-form-field>
                               <button mat-icon-button color="primary" (click)="saveCommander(row)" title="Save">
                                 <mat-icon>check</mat-icon>
                               </button>
@@ -448,7 +469,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
     .waitlist-row { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
     .index-col { width: 36px; min-width: 36px; color: #888; font-size: 0.85rem; padding-right: 4px; }
     .commander-edit { display: flex; align-items: center; gap: 4px; }
-    .commander-input { width: 160px; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; }
+    .commander-inline-field { width: 180px; font-size: 0.9rem; }
     .edit-commander-btn { opacity: 0.4; transition: opacity 0.15s; }
     .edit-commander-btn:hover { opacity: 1; }
   `]
@@ -482,6 +503,9 @@ export class EventDetailComponent implements OnInit {
   editingCommanderPlayerId: number | null = null;
   editCommanderValue = '';
 
+  commanderSuggestions: string[] = [];
+  private commanderQuery$ = new Subject<string>();
+
   private registeredPlayerIds = new Set<number>();
 
   constructor(
@@ -493,6 +517,7 @@ export class EventDetailComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     public authService: AuthService,
     private dialog: MatDialog,
+    private scryfallService: ScryfallService,
   ) {}
 
   ngOnInit() {
@@ -502,8 +527,20 @@ export class EventDetailComponent implements OnInit {
       this.router.navigate(['/events']);
       return;
     }
+    this.commanderQuery$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(q => this.scryfallService.getSuggestions(q)),
+    ).subscribe(suggestions => {
+      this.commanderSuggestions = suggestions;
+      this.cdr.detectChanges();
+    });
     this.initSubscriptions();
     this.loadData();
+  }
+
+  onCommanderInputChange(query: string): void {
+    this.commanderQuery$.next(query);
   }
 
   private initSubscriptions() {
