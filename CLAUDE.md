@@ -36,6 +36,32 @@ All work follows a **feature branch → PR → dev** flow:
 - Bug fixes discovered during a task go on the **same branch** as the task (additional commits), not a new branch.
 - The remote is named `TournamentOrganizer` (not `origin`).
 
+### Backlog item status (when a prompt file has a GitHub Issue link)
+
+If the prompt file for the current task contains a `> **GitHub Issue:** [#N ...]` line, update the project board status at these points:
+
+| Step | Status to set |
+|---|---|
+| Starting work (step 1–2) | `In Progress` |
+| PR merged to `dev` | `Done` |
+
+```bash
+# 1. Find the project item ID for issue #N (replace 99 with the actual issue number)
+ITEM_ID=$(gh project item-list 2 --owner sgrecoswg --format json \
+  | jq -r '.items[] | select(.content.number == 99) | .id')
+
+# 2. Set Status — use the appropriate option ID:
+#   Backlog     → f75ad846
+#   Ready       → f8227f40
+#   In Progress → 47fc9ee4
+#   In Review   → 2d25f841
+#   Done        → 98236657
+gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+  --id "$ITEM_ID" \
+  --field-id PVTSSF_lAHOBDyNN84BSBgjzg_rb-U \
+  --single-select-option-id 47fc9ee4   # ← swap option ID as needed
+```
+
 ## Commands
 
 Several slash-command skills are available for common operations — prefer these over raw shell commands:
