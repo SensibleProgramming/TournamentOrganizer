@@ -11,7 +11,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, PlayerDto, CommanderStatDto } from '../../core/models/api.models';
+import { PlayerProfile, PlayerDto, CommanderStatDto, ScryfallCard } from '../../core/models/api.models';
 
 describe('PlayerProfileComponent (smoke)', () => {
   const profileStub: PlayerProfile = {
@@ -552,5 +552,163 @@ describe('PlayerProfileComponent — card name autocomplete', () => {
     expect(fixture.componentInstance.wishlistSuggestions).toEqual(['Lightning Bolt']);
     expect(fixture.componentInstance.tradeSuggestions).toEqual(['Sol Ring']);
     jest.useRealTimers();
+  });
+});
+
+// ── Card Preview Panel ─────────────────────────────────────────────────────────
+
+describe('PlayerProfileComponent — card preview panel', () => {
+  const PLAYER_ID = 1;
+
+  const mockCard: ScryfallCard = {
+    name: 'Lightning Bolt',
+    image_uris: { normal: 'https://cards.scryfall.io/normal/bolt.jpg', large: 'https://cards.scryfall.io/large/bolt.jpg' },
+    prices: { usd: '0.50', usd_foil: '3.00' },
+    purchase_uris: { tcgplayer: 'https://tcgplayer.com/bolt', cardkingdom: 'https://cardkingdom.com/bolt' },
+  };
+
+  const dfcCard: ScryfallCard = {
+    name: 'Delver of Secrets',
+    card_faces: [
+      { image_uris: { normal: 'https://cards.scryfall.io/normal/delver-front.jpg', large: '' } },
+    ],
+    prices: { usd: '2.00', usd_foil: null },
+    purchase_uris: { tcgplayer: 'https://tcgplayer.com/delver' },
+  };
+
+  function makeProfile(): PlayerProfile {
+    return {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: false, placementGamesLeft: 5, isActive: true,
+      gameHistory: [], eventRegistrations: [],
+    };
+  }
+
+  let mockScryfallService: { getSuggestions: jest.Mock; getCard: jest.Mock };
+
+  async function setup(getCardResult: ScryfallCard | null = mockCard) {
+    mockScryfallService = {
+      getSuggestions: jest.fn().mockReturnValue(of([])),
+      getCard: jest.fn().mockReturnValue(of(getCardResult)),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [PlayerProfileComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
+        { provide: PlayerService, useValue: { getProfile: jest.fn().mockReturnValue(of(makeProfile())), updatePlayer: jest.fn().mockReturnValue(of(makeProfile())), refreshPlayersFromApi: jest.fn().mockReturnValue(of(undefined)) } },
+        { provide: ApiService, useValue: {
+          getWishlist: jest.fn().mockReturnValue(of([])),
+          getWishlistSupply: jest.fn().mockReturnValue(of([])),
+          getTradeList: jest.fn().mockReturnValue(of([])),
+          getSuggestedTrades: jest.fn().mockReturnValue(of([])),
+          getTradeDemand: jest.fn().mockReturnValue(of([])),
+          getCommanderStats: jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+        }},
+        { provide: LocalStorageContext, useValue: { players: { getById: jest.fn(), getAll: jest.fn().mockReturnValue([]) } } },
+        { provide: AuthService, useValue: { currentUser: null, isAdmin: false, isStoreManager: false } },
+        { provide: MatDialog, useValue: { open: jest.fn() } },
+        { provide: MatSnackBar, useValue: { open: jest.fn() } },
+        { provide: ScryfallService, useValue: mockScryfallService },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('selectedCard is null on init', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.selectedCard).toBeNull();
+  });
+
+  it('onCardClick sets selectedCardName and calls getCard', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+
+    comp.onCardClick('Lightning Bolt', new MouseEvent('click'));
+    fixture.detectChanges();
+
+    expect(mockScryfallService.getCard).toHaveBeenCalledWith('Lightning Bolt');
+    expect(comp.selectedCardName).toBe('Lightning Bolt');
+    expect(comp.selectedCard).toEqual(mockCard);
+  });
+
+  it('onCardClick on same card twice dismisses the panel', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+
+    comp.onCardClick('Lightning Bolt', new MouseEvent('click'));
+    fixture.detectChanges();
+    comp.onCardClick('Lightning Bolt', new MouseEvent('click'));
+    fixture.detectChanges();
+
+    expect(comp.selectedCard).toBeNull();
+    expect(comp.selectedCardName).toBeNull();
+  });
+
+  it('dismissCard clears selectedCard and selectedCardName', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+
+    comp.onCardClick('Lightning Bolt', new MouseEvent('click'));
+    fixture.detectChanges();
+    comp.dismissCard();
+    fixture.detectChanges();
+
+    expect(comp.selectedCard).toBeNull();
+    expect(comp.selectedCardName).toBeNull();
+  });
+
+  it('getCardImageUrl returns image_uris.normal for standard card', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+    comp.onCardClick('Lightning Bolt', new MouseEvent('click'));
+    fixture.detectChanges();
+
+    expect(comp.getCardImageUrl()).toBe('https://cards.scryfall.io/normal/bolt.jpg');
+  });
+
+  it('getCardImageUrl falls back to card_faces[0] for double-faced cards', async () => {
+    await setup(dfcCard);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+    comp.onCardClick('Delver of Secrets', new MouseEvent('click'));
+    fixture.detectChanges();
+
+    expect(comp.getCardImageUrl()).toBe('https://cards.scryfall.io/normal/delver-front.jpg');
+  });
+
+  it('getCardImageUrl returns null when no card is selected', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.getCardImageUrl()).toBeNull();
+  });
+
+  it('getCard returning null keeps selectedCardName but sets selectedCard to null', async () => {
+    await setup(null);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+
+    comp.onCardClick('UnknownCard', new MouseEvent('click'));
+    fixture.detectChanges();
+
+    expect(comp.selectedCardName).toBe('UnknownCard');
+    expect(comp.selectedCard).toBeNull();
   });
 });

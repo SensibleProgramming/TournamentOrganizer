@@ -29,7 +29,8 @@ public class StoresService : IStoresService
         var differential = store.Settings?.AllowableTradeDifferential ?? 10m;
         var themeId = store.Settings?.ThemeId;
         var themeCssClass = store.Settings?.Theme?.CssClass;
-        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(store), MapLicense(store), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null);
+        var sellerPortalUrl = store.Settings?.SellerPortalUrl;
+        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(store), MapLicense(store), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null, sellerPortalUrl);
     }
 
     public async Task<StoreDto> CreateAsync(CreateStoreDto dto)
@@ -60,14 +61,16 @@ public class StoresService : IStoresService
         {
             StoreId = id,
             AllowableTradeDifferential = dto.AllowableTradeDifferential,
-            ThemeId = dto.ThemeId
+            ThemeId = dto.ThemeId,
+            SellerPortalUrl = dto.SellerPortalUrl == string.Empty ? null : dto.SellerPortalUrl
         });
 
         var updatedStore = await _storeRepo.GetByIdWithEventsAsync(id);
         var differential = updatedStore?.Settings?.AllowableTradeDifferential ?? dto.AllowableTradeDifferential;
         var themeId = updatedStore?.Settings?.ThemeId;
         var themeCssClass = updatedStore?.Settings?.Theme?.CssClass;
-        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(updatedStore), MapLicense(updatedStore), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null);
+        var updatedPortalUrl = updatedStore?.Settings?.SellerPortalUrl;
+        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(updatedStore), MapLicense(updatedStore), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null, updatedPortalUrl);
     }
 
     public async Task<StoreDto> UpdateLogoUrlAsync(int storeId, string? logoUrl)

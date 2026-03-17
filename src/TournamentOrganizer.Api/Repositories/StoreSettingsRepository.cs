@@ -25,6 +25,7 @@ public class StoreSettingsRepository : IStoreSettingsRepository
         {
             existing.AllowableTradeDifferential = settings.AllowableTradeDifferential;
             existing.ThemeId = settings.ThemeId;
+            existing.SellerPortalUrl = settings.SellerPortalUrl;
             existing.UpdatedOn = DateTime.UtcNow;
         }
         await _db.SaveChangesAsync();
