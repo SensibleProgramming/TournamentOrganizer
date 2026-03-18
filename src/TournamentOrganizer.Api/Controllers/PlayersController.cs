@@ -126,4 +126,13 @@ public class PlayersController : ControllerBase
                        ?? User.FindFirstValue("email");
         return await _playerService.IsPlayerEmailAsync(playerId, playerEmail);
     }
+
+    [HttpGet("{id}/ratinghistory")]
+    [AllowAnonymous]
+    public async Task<ActionResult<RatingHistoryDto>> GetRatingHistory(int id)
+    {
+        var result = await _playerService.GetRatingHistoryAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
 }

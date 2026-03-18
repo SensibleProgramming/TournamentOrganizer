@@ -1,4 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartData, ChartOptions } from 'chart.js';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -23,7 +25,7 @@ import { ScryfallService } from '../../core/services/scryfall.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PlayerService } from '../../core/services/player.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto, ScryfallCard } from '../../core/models/api.models';
+import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto } from '../../core/models/api.models';
 import { RatingBadgeComponent } from '../../shared/components/rating-badge.component';
 import { PlacementBadgeComponent } from '../../shared/components/placement-badge.component';
 
@@ -34,7 +36,8 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     MatCardModule, MatTableModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSnackBarModule, MatTooltipModule, MatPaginatorModule,
     MatProgressSpinnerModule, MatAutocompleteModule,
-    RatingBadgeComponent, PlacementBadgeComponent
+    RatingBadgeComponent, PlacementBadgeComponent,
+    BaseChartDirective,
   ],
   template: `
     @if (profile) {
@@ -141,6 +144,21 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
                 <tr mat-header-row *matHeaderRowDef="commanderColumns"></tr>
                 <tr mat-row *matRowDef="let row; columns: commanderColumns;"></tr>
               </table>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
+
+      @if (ratingHistory.length > 1) {
+        <div class="rating-history-section">
+          <h3>Rating History</h3>
+          <mat-card>
+            <mat-card-content>
+              <canvas baseChart
+                      [data]="ratingChartData"
+                      [options]="ratingChartOptions"
+                      type="line">
+              </canvas>
             </mat-card-content>
           </mat-card>
         </div>
@@ -545,6 +563,14 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
 export class PlayerProfileComponent implements OnInit {
   profile: PlayerProfile | null = null;
   commanderStats: CommanderStatDto[] = [];
+  ratingHistory: RatingSnapshotDto[] = [];
+  ratingChartData: ChartData<'line'> = { datasets: [] };
+  ratingChartOptions: ChartOptions<'line'> = {
+    responsive: true,
+    plugins: { tooltip: { callbacks: {
+      label: (ctx) => `Score: ${ctx.parsed.y?.toFixed(2) ?? ''}`
+    }}}
+  };
   wishlist: WishlistEntryDto[] = [];
   wishlistSupply = new Map<string, string[]>();
   tradeList: TradeEntryDto[] = [];
@@ -704,6 +730,7 @@ export class PlayerProfileComponent implements OnInit {
         this.loadSuggestedTrades(id);
         this.loadTradeDemand(id);
         this.loadCommanderStats(id);
+        this.loadRatingHistory(id);
       },
       error: () => {
         this.apiOnline = false;
@@ -722,6 +749,20 @@ export class PlayerProfileComponent implements OnInit {
   private loadCommanderStats(playerId: number) {
     this.apiService.getCommanderStats(playerId).subscribe({
       next: stats => { this.commanderStats = stats.commanders; this.cdr.detectChanges(); },
+      error: () => {}
+    });
+  }
+
+  private loadRatingHistory(playerId: number) {
+    this.apiService.getRatingHistory(playerId).subscribe({
+      next: (data) => {
+        this.ratingHistory = data?.history ?? [];
+        this.ratingChartData = {
+          labels: this.ratingHistory.map(s => new Date(s.date).toLocaleDateString()),
+          datasets: [{ data: this.ratingHistory.map(s => s.conservativeScore), label: 'Rating', fill: false, tension: 0.3 }]
+        };
+        this.cdr.detectChanges();
+      },
       error: () => {}
     });
   }

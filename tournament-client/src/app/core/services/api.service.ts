@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  CreatePlayerDto, UpdatePlayerDto, PlayerDto, PlayerProfile, PlayerCommanderStatsDto, LeaderboardEntry,
+  CreatePlayerDto, UpdatePlayerDto, PlayerDto, PlayerProfile, PlayerCommanderStatsDto, RatingHistoryDto, LeaderboardEntry,
   CommanderMetaReportDto,
   CreateEventDto, EventDto, RegisterPlayerDto, EventPlayerDto, CheckInResponseDto,
   GameResultSubmit, RoundDto, StandingsEntry, PairingsDto,
@@ -51,6 +51,10 @@ export class ApiService {
 
   getCommanderStats(playerId: number): Observable<PlayerCommanderStatsDto> {
     return this.http.get<PlayerCommanderStatsDto>(`${this.base}/players/${playerId}/commanderstats`);
+  }
+
+  getRatingHistory(playerId: number): Observable<RatingHistoryDto> {
+    return this.http.get<RatingHistoryDto>(`${this.base}/players/${playerId}/ratinghistory`);
   }
 
   // Leaderboard

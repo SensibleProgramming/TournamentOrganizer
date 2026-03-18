@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -498,6 +498,27 @@ export async function mockScryfallAutocomplete(page: Page, suggestions: string[]
   });
 }
 
+export function makeRatingSnapshotDto(overrides: Partial<RatingSnapshotDto> = {}): RatingSnapshotDto {
+  return {
+    date:              '2024-01-01T00:00:00',
+    conservativeScore: 5.0,
+    eventName:         'Test Event',
+    roundNumber:       1,
+    ...overrides,
+  };
+}
+
+/** Intercept GET /api/players/:id/ratinghistory and return the given response. */
+export async function mockGetRatingHistory(page: Page, playerId: number, response: RatingHistoryDto): Promise<void> {
+  await page.route(`**/api/players/${playerId}/ratinghistory`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
 /**
  * Stub all player-profile sub-resource endpoints (wishlist, trades, commander stats, etc.)
  * with empty arrays so that mat-table data sources receive valid iterables.
@@ -520,4 +541,6 @@ export async function mockPlayerProfileSubApis(page: Page, playerId: number): Pr
     if (route.request().method() === 'GET') route.fulfill({ json: [] });
     else route.continue();
   });
+  await page.route(`**/api/players/${playerId}/ratinghistory`, route =>
+    route.fulfill({ json: { playerId, history: [] } }));
 }

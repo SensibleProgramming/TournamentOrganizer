@@ -191,6 +191,41 @@ public class PlayerService : IPlayerService
         return player?.Email == email;
     }
 
+    public async Task<RatingHistoryDto?> GetRatingHistoryAsync(int playerId)
+    {
+        var player = await _playerRepo.GetByIdAsync(playerId);
+        if (player == null) return null;
+
+        var myResults = await _gameRepo.GetPlayerGamesForRatingReplayAsync(playerId);
+
+        double mu = 25.0, sigma = 25.0 / 3.0;
+        var snapshots = new List<RatingSnapshotDto>();
+
+        foreach (var myResult in myResults)
+        {
+            var allResults = myResult.Game.Results.OrderBy(r => r.FinishPosition).ToList();
+            var ratings = allResults.Select(r =>
+                r.PlayerId == playerId
+                    ? (mu, sigma)
+                    : (r.Player.Mu, r.Player.Sigma)
+            ).ToList();
+            var finishPositions = allResults.Select(r => r.FinishPosition).ToArray();
+
+            var newRatings = TrueSkillCalculator.CalculateNewRatings(ratings, finishPositions);
+            var myIndex = allResults.FindIndex(r => r.PlayerId == playerId);
+            (mu, sigma) = (newRatings[myIndex].NewMu, newRatings[myIndex].NewSigma);
+
+            var conservativeScore = mu - 3 * sigma;
+            snapshots.Add(new RatingSnapshotDto(
+                myResult.Game.Pod.Round.Event.Date,
+                conservativeScore,
+                myResult.Game.Pod.Round.Event.Name,
+                myResult.Game.Pod.Round.RoundNumber));
+        }
+
+        return new RatingHistoryDto(playerId, snapshots);
+    }
+
     private static PlayerDto ToDto(Player p) => new(
         p.Id, p.Name, p.Email, p.Mu, p.Sigma, p.ConservativeScore, p.IsRanked, p.PlacementGamesLeft, p.IsActive, p.AvatarUrl);
 }

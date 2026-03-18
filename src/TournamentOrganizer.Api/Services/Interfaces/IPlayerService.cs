@@ -16,4 +16,5 @@ public interface IPlayerService
     Task<PlayerDto> UpdateAvatarUrlAsync(int playerId, string? avatarUrl);
     Task<bool> IsPlayerAtStoreAsync(int playerId, int storeId);
     Task<bool> IsPlayerEmailAsync(int playerId, string? email);
+    Task<RatingHistoryDto?> GetRatingHistoryAsync(int playerId);
 }
