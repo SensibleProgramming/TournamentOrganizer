@@ -11,7 +11,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, PlayerDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto, RatingHistoryDto } from '../../core/models/api.models';
+import { PlayerProfile, PlayerDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto, RatingHistoryDto, PlayerBadgeDto } from '../../core/models/api.models';
 
 describe('PlayerProfileComponent (smoke)', () => {
   const profileStub: PlayerProfile = {
@@ -849,5 +849,114 @@ describe('PlayerProfileComponent — Rating History', () => {
     const comp = fixture.componentInstance;
     const dataset = comp.ratingChartData.datasets[0];
     expect(dataset.data).toEqual([3.5, 7.2]);
+  });
+});
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+
+describe('PlayerProfileComponent — Badges', () => {
+  const PLAYER_ID = 1;
+
+  function makeProfileWithBadges(badges?: PlayerBadgeDto[]): PlayerProfile {
+    return {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: true, placementGamesLeft: 0, isActive: true,
+      gameHistory: [], eventRegistrations: [],
+      badges,
+    };
+  }
+
+  async function setup(profile: PlayerProfile) {
+    const mockPlayerService = {
+      getProfile:   jest.fn().mockReturnValue(of(profile)),
+      updatePlayer: jest.fn().mockReturnValue(of(profile)),
+    };
+    const mockApi = {
+      getWishlist:        jest.fn().mockReturnValue(of([])),
+      getWishlistSupply:  jest.fn().mockReturnValue(of([])),
+      getTradeList:       jest.fn().mockReturnValue(of([])),
+      getSuggestedTrades: jest.fn().mockReturnValue(of([])),
+      getTradeDemand:     jest.fn().mockReturnValue(of([])),
+      getCommanderStats:  jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+      getRatingHistory:   jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
+    };
+    const mockCtx  = { players: { getById: jest.fn().mockReturnValue(null), getAll: jest.fn().mockReturnValue([]) } };
+    const mockAuth = { currentUser: null };
+
+    await TestBed.configureTestingModule({
+      imports: [PlayerProfileComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ActivatedRoute,      useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
+        { provide: PlayerService,       useValue: mockPlayerService },
+        { provide: ApiService,          useValue: mockApi },
+        { provide: LocalStorageContext, useValue: mockCtx },
+        { provide: AuthService,         useValue: mockAuth },
+        { provide: MatDialog,           useValue: { open: jest.fn().mockReturnValue({ afterClosed: () => of(false) }) } },
+        { provide: MatSnackBar,         useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('Achievements section is rendered when profile.badges is non-empty', async () => {
+    const badge: PlayerBadgeDto = { badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z', eventId: null };
+    await setup(makeProfileWithBadges([badge]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Achievements');
+  });
+
+  it('badge display name is shown', async () => {
+    const badge: PlayerBadgeDto = { badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z', eventId: null };
+    await setup(makeProfileWithBadges([badge]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('First Win');
+  });
+
+  it('Achievements section is absent when profile.badges is empty', async () => {
+    await setup(makeProfileWithBadges([]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).not.toContain('Achievements');
+  });
+
+  it('Achievements section is absent when profile.badges is undefined', async () => {
+    await setup(makeProfileWithBadges(undefined));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).not.toContain('Achievements');
+  });
+
+  it('badgeIcon returns correct icon for known keys', async () => {
+    await setup(makeProfileWithBadges([]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    const comp = fixture.componentInstance;
+    expect(comp.badgeIcon('first_win')).toBe('emoji_events');
+    expect(comp.badgeIcon('tournament_winner')).toBe('workspace_premium');
+    expect(comp.badgeIcon('unknown_key')).toBe('grade');
+  });
+
+  it('each badge chip shows the badge display name', async () => {
+    const badges: PlayerBadgeDto[] = [
+      { badgeKey: 'first_win',          displayName: 'First Win',           awardedAt: '2026-01-01T00:00:00Z', eventId: null },
+      { badgeKey: 'tournament_winner',  displayName: 'Tournament Champion', awardedAt: '2026-02-01T00:00:00Z', eventId: 1 },
+      { badgeKey: 'veteran',            displayName: 'Veteran',             awardedAt: '2026-03-01T00:00:00Z', eventId: null },
+    ];
+    await setup(makeProfileWithBadges(badges));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('First Win');
+    expect(el.textContent).toContain('Tournament Champion');
+    expect(el.textContent).toContain('Veteran');
   });
 });

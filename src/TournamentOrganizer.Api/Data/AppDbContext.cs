@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<Theme> Themes => Set<Theme>();
     public DbSet<EventTemplate> EventTemplates => Set<EventTemplate>();
+    public DbSet<PlayerBadge> PlayerBadges => Set<PlayerBadge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -188,6 +189,15 @@ public class AppDbContext : DbContext
                 .WithMany(s => s.EventTemplates)
                 .HasForeignKey(t => t.StoreId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlayerBadge>(entity =>
+        {
+            entity.HasOne(b => b.Player)
+                .WithMany(p => p.Badges)
+                .HasForeignKey(b => b.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(b => b.BadgeKey).HasMaxLength(50).IsRequired();
         });
 
         modelBuilder.Entity<StoreEvent>(entity =>

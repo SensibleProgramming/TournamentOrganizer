@@ -55,6 +55,14 @@ export interface PlayerProfile {
   gameHistory: PlayerGameHistory[];
   eventRegistrations: PlayerEventRegistration[];
   avatarUrl?: string | null;
+  badges?: PlayerBadgeDto[];
+}
+
+export interface PlayerBadgeDto {
+  badgeKey: string;
+  displayName: string;
+  awardedAt: string;
+  eventId?: number | null;
 }
 
 export interface PlayerGameHistory {

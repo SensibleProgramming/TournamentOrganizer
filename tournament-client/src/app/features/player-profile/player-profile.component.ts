@@ -149,6 +149,20 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
         </div>
       }
 
+      @if (profile?.badges?.length) {
+        <div class="badges-section">
+          <h3>Achievements</h3>
+          <div class="badge-list">
+            @for (badge of profile!.badges!; track badge.badgeKey) {
+              <div class="badge-chip" [matTooltip]="badge.displayName + ' — ' + (badge.awardedAt | date)">
+                <mat-icon>{{ badgeIcon(badge.badgeKey) }}</mat-icon>
+                <span>{{ badge.displayName }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
       <mat-tab-group>
 
         <!-- History tab -->
@@ -1011,6 +1025,18 @@ export class PlayerProfileComponent implements OnInit {
 
   getWins(): number {
     return this.profile?.gameHistory.filter(g => g.finishPosition === 1).length ?? 0;
+  }
+
+  badgeIcon(key: string): string {
+    const icons: Record<string, string> = {
+      first_win: 'emoji_events',
+      placement_complete: 'military_tech',
+      tournament_winner: 'workspace_premium',
+      undefeated_swiss: 'stars',
+      veteran: 'shield',
+      centurion: '100',
+    };
+    return icons[key] ?? 'grade';
   }
 
   startEdit() {

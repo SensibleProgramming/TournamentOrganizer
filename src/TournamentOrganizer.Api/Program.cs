@@ -90,6 +90,7 @@ builder.Services.AddScoped<IDiscordWebhookService, DiscordWebhookService>();
 builder.Services.AddScoped<IEventTemplateService, EventTemplateService>();
 builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IBadgeService, BadgeService>();
 
 // Card price (Scryfall) — typed HttpClient with 1h in-memory cache
 builder.Services.AddMemoryCache();
