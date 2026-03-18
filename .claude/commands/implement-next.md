@@ -73,6 +73,21 @@ Read the file at `PROMPT_PATH` in full. This is the authoritative spec for all i
 
 Derive `SHORT_NAME` from the prompt file name (strip the leading `NN_` and `.md`, e.g. `store-public-page`).
 
+### Step 2c — Check dependencies
+
+Read the `## Dependencies` section of the prompt file.
+
+- If `None` or the section is absent → proceed to Step 3.
+- For each listed issue number `#N`, check whether a PR referencing it has been merged to `dev`:
+  ```bash
+  gh pr list --base dev --state merged --json number,title,body \
+    | jq -r '.[] | select(.body | test("#N")) | "#\(.number) \(.title)"'
+  ```
+  - All dependencies merged → proceed to Step 3.
+  - Any dependency NOT yet merged → **stop**. Do not create a branch or mark In Progress.
+    Report which issue is blocking (e.g. "Skipping #N — depends on #M which is not yet merged to dev.").
+    If other Ready items exist, move to the next one and repeat from Step 2.
+
 ## Step 3 — Mark "In Progress" on the project board
 
 Determine the current iteration from today's date:
