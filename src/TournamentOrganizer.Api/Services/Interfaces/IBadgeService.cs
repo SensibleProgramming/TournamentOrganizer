@@ -1,3 +1,5 @@
+using TournamentOrganizer.Api.DTOs;
+
 namespace TournamentOrganizer.Api.Services.Interfaces;
 
 public enum BadgeTrigger { GameResultRecorded, EventCompleted, PlacementComplete, TournamentWinner }
@@ -5,5 +7,5 @@ public enum BadgeTrigger { GameResultRecorded, EventCompleted, PlacementComplete
 public interface IBadgeService
 {
     Task CheckAndAwardAsync(int playerId, BadgeTrigger trigger, int? eventId = null);
-    Task<List<DTOs.PlayerBadgeDto>> GetBadgesAsync(int playerId);
+    Task<List<PlayerBadgeDto>> GetBadgesAsync(int playerId);
 }

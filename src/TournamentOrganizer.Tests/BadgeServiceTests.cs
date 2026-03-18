@@ -1,13 +1,15 @@
-using Microsoft.EntityFrameworkCore;
-using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Data;
 using TournamentOrganizer.Api.Models;
-using TournamentOrganizer.Api.Repositories.Interfaces;
 using TournamentOrganizer.Api.Services;
 using TournamentOrganizer.Api.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Repositories.Interfaces;
 
 namespace TournamentOrganizer.Tests;
 
-/// <summary>
+
+    // ── tests ────────────────────────────────────────────────────────────────
 /// TDD tests for BadgeService.
 /// Written BEFORE wiring up the service — confirm red, then green.
 /// </summary>

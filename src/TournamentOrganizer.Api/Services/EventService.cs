@@ -601,6 +601,9 @@ public class EventService : IEventService
             await _discordService.PostEventCompletedAsync(eventId);
 
             // Award event-completion badges for all registered players
+            var registeredPlayers = await _eventRepo.GetRegisteredPlayersAsync(eventId);
+            foreach (var player in registeredPlayers)
+                await _badgeService.CheckAndAwardAsync(player.Id, BadgeTrigger.EventCompleted, eventId);
             var registrations = await _eventRepo.GetRegistrationsWithPlayersAsync(eventId);
             var activePlayers = registrations
                 .Where(r => !r.IsDropped && !r.IsDisqualified)

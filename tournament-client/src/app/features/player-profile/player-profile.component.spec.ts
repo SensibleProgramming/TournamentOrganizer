@@ -11,7 +11,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, PlayerBadgeDto, PlayerDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto, RatingHistoryDto } from '../../core/models/api.models';
+import { PlayerProfile, PlayerDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto, RatingHistoryDto, PlayerBadgeDto } from '../../core/models/api.models';
 
 describe('PlayerProfileComponent (smoke)', () => {
   const profileStub: PlayerProfile = {
@@ -857,6 +857,18 @@ describe('PlayerProfileComponent — Rating History', () => {
 describe('PlayerProfileComponent — Badges', () => {
   const PLAYER_ID = 1;
 
+  function makeProfileWithBadges(badges?: PlayerBadgeDto[]): PlayerProfile {
+    return {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: true, 
+      placementGamesLeft: 0,
+      isActive: true,
+      gameHistory: [],
+      eventRegistrations: [],
+      badges,
+    };
+  }
   function makeBadge(overrides: Partial<PlayerBadgeDto> = {}): PlayerBadgeDto {
     return { badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z', eventId: null, ...overrides };
   }
@@ -898,7 +910,7 @@ describe('PlayerProfileComponent — Badges', () => {
         { provide: ApiService,          useValue: mockApi },
         { provide: LocalStorageContext, useValue: mockCtx },
         { provide: AuthService,         useValue: mockAuth },
-        { provide: MatDialog,           useValue: { open: jest.fn() } },
+        { provide: MatDialog,           useValue: { open: jest.fn().mockReturnValue({ afterClosed: () => of(false) }) } },
         { provide: MatSnackBar,         useValue: { open: jest.fn() } },
       ],
     }).compileComponents();

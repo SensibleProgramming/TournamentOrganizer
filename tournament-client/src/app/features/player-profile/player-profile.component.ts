@@ -1029,12 +1029,12 @@ export class PlayerProfileComponent implements OnInit {
 
   badgeIcon(key: string): string {
     const icons: Record<string, string> = {
-      first_win:          'emoji_events',
+      first_win: 'emoji_events',
       placement_complete: 'military_tech',
-      tournament_winner:  'workspace_premium',
-      undefeated_swiss:   'stars',
-      veteran:            'shield',
-      centurion:          '100',
+      tournament_winner: 'workspace_premium',
+      undefeated_swiss: 'stars',
+      veteran: 'shield',
+      centurion: '100',
     };
     return icons[key] ?? 'grade';
   }

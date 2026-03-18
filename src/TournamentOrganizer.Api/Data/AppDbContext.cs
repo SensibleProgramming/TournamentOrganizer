@@ -201,6 +201,15 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<PlayerBadge>(entity =>
+        {
+            entity.HasOne(b => b.Player)
+                .WithMany(p => p.Badges)
+                .HasForeignKey(b => b.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(b => b.BadgeKey).HasMaxLength(50).IsRequired();
+        });
+
         modelBuilder.Entity<StoreEvent>(entity =>
         {
             entity.HasIndex(se => se.EventId).IsUnique();

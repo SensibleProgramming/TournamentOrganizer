@@ -52,6 +52,13 @@ public class TrueSkillService : ITrueSkillService
 
         await _playerRepo.UpdateRangeAsync(playersToUpdate);
 
+        // Award badges for each player
+        for (int i = 0; i < results.Count; i++)
+        {
+            var player = results[i].Player;
+            await _badgeService.CheckAndAwardAsync(player.Id, BadgeTrigger.GameResultRecorded, eventId);
+        }
+
         foreach (var (playerId, evtId) in newlyRanked)
         {
             await _discordService.PostPlayerRankedAsync(playerId, evtId);
