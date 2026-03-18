@@ -48,6 +48,11 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
           <mat-icon>bar_chart</mat-icon> Meta Report
         </button>
       }
+      @if (authService.isStoreManager && store?.slug) {
+        <a mat-stroked-button [routerLink]="['/stores/public', store!.slug]" target="_blank" style="margin-left:8px" data-testid="public-page-link">
+          <mat-icon>open_in_new</mat-icon> Public Page
+        </a>
+      }
     </div>
 
     @if (store) {
