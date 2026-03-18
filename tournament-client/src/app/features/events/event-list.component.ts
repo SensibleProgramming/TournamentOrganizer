@@ -15,9 +15,11 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatSelectModule } from '@angular/material/select';
 import { Subscription } from 'rxjs';
 import { EventService } from '../../core/services/event.service';
+import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StoreContextService } from '../../core/services/store-context.service';
-import { EventDto, PointSystem, POINT_SYSTEM_LABELS } from '../../core/models/api.models';
+import { SyncService } from '../../core/services/sync.service';
+import { EventDto, EventTemplateDto, PointSystem, POINT_SYSTEM_LABELS } from '../../core/models/api.models';
 
 @Component({
   selector: 'app-event-list',
@@ -63,6 +65,16 @@ import { EventDto, PointSystem, POINT_SYSTEM_LABELS } from '../../core/models/ap
                 }
               </mat-select>
             </mat-form-field>
+            @if (templates.length > 0) {
+              <mat-form-field class="template-field">
+                <mat-label>Use Template</mat-label>
+                <mat-select (ngModelChange)="applyTemplate($event)" [(ngModel)]="selectedTemplateId">
+                  @for (t of templates; track t.id) {
+                    <mat-option [value]="t.id">{{ t.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
             <button mat-raised-button color="primary" (click)="createEvent()"
                     [disabled]="!newName || !newDate || (authService.isAdmin && !authService.currentUser?.storeId && !storeContext.selectedStoreId)">
               Create Event
@@ -99,6 +111,11 @@ import { EventDto, PointSystem, POINT_SYSTEM_LABELS } from '../../core/models/ap
                 </mat-card-content>
                 @if (authService.isStoreEmployee) {
                   <mat-card-actions>
+                    @if (isOffline(evt)) {
+                      <button mat-button color="accent" class="sync-btn" (click)="syncEvent(evt, $event)">
+                        <mat-icon>sync</mat-icon> Sync
+                      </button>
+                    }
                     <button mat-button color="warn" (click)="removeEvent(evt.id, $event)">
                       <mat-icon>delete</mat-icon> Remove
                     </button>
@@ -124,10 +141,13 @@ import { EventDto, PointSystem, POINT_SYSTEM_LABELS } from '../../core/models/ap
     .event-info { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     .slots-remaining { color: #888; font-size: 0.82rem; margin-left: 2px; }
     .empty-state { color: #888; font-style: italic; padding: 16px 0; }
+    .template-field { min-width: 200px; }
   `]
 })
 export class EventListComponent implements OnInit, OnDestroy {
   events: EventDto[] = [];
+  templates: EventTemplateDto[] = [];
+  selectedTemplateId: number | null = null;
   private storeChangeSub!: Subscription;
 
   get canCreateEvent(): boolean {
@@ -161,10 +181,12 @@ export class EventListComponent implements OnInit, OnDestroy {
 
   constructor(
     private eventService: EventService,
+    private apiService: ApiService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     public authService: AuthService,
-    public storeContext: StoreContextService
+    public storeContext: StoreContextService,
+    private syncService: SyncService
   ) {}
 
   ngOnInit() {
@@ -175,12 +197,55 @@ export class EventListComponent implements OnInit, OnDestroy {
     });
     this.storeChangeSub = this.storeContext.selectedStoreId$.subscribe(() => {
       this.eventService.loadAllEvents();
+      this.loadTemplates();
       this.cdr.detectChanges();
     });
+    this.loadTemplates();
+  }
+
+  private loadTemplates(): void {
+    if (!this.canCreateEvent) return;
+    const storeId = this.authService.currentUser?.storeId ?? this.storeContext.selectedStoreId;
+    if (!storeId) return;
+    this.apiService.getEventTemplates(storeId).subscribe({
+      next: templates => {
+        this.templates = templates;
+        this.cdr.detectChanges();
+      },
+      error: () => { /* non-critical */ }
+    });
+  }
+
+  applyTemplate(templateId: number | null): void {
+    const t = this.templates.find(x => x.id === templateId);
+    if (!t) return;
+    this.newName = t.name;
+    this.newMaxPlayers = t.maxPlayers;
+    this.cdr.detectChanges();
   }
 
   ngOnDestroy(): void {
     this.storeChangeSub.unsubscribe();
+  }
+
+  isOffline(evt: EventDto): boolean {
+    return evt.id < 0;
+  }
+
+  syncEvent(evt: EventDto, event: MouseEvent) {
+    event.stopPropagation();
+    this.syncService.push().then(result => {
+      if (result.errors > 0) {
+        this.snackBar.open('Sync completed with errors', 'OK', { duration: 4000 });
+      } else {
+        this.snackBar.open('Event synced successfully', 'OK', { duration: 3000 });
+      }
+      this.eventService.loadAllEvents();
+      this.cdr.detectChanges();
+    }).catch(() => {
+      this.snackBar.open('Sync failed', 'OK', { duration: 4000 });
+      this.cdr.detectChanges();
+    });
   }
 
   removeEvent(id: number, event: MouseEvent) {

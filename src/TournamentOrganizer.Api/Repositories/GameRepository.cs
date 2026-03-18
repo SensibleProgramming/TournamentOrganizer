@@ -78,4 +78,22 @@ public class GameRepository : IGameRepository
             .Select(gr => gr.PlayerId)
             .Distinct()
             .ToListAsync();
+
+    public async Task<List<GameResult>> GetStoreGameResultsAsync(int storeId, DateTime? since)
+        => await _db.GameResults
+            .Where(gr => gr.Game.Pod.Round.Event.StoreEvent != null
+                      && gr.Game.Pod.Round.Event.StoreEvent.StoreId == storeId)
+            .Where(gr => since == null || gr.Game.Pod.Round.Event.Date >= since)
+            .ToListAsync();
+
+    public async Task<List<GameResult>> GetPlayerGamesForRatingReplayAsync(int playerId)
+        => await _db.GameResults
+            .Include(gr => gr.Game)
+                .ThenInclude(g => g.Results).ThenInclude(r => r.Player)
+            .Include(gr => gr.Game)
+                .ThenInclude(g => g.Pod).ThenInclude(p => p.Round).ThenInclude(r => r.Event)
+            .Where(gr => gr.PlayerId == playerId)
+            .OrderBy(gr => gr.Game.Pod.Round.Event.Date)
+            .ThenBy(gr => gr.Game.Pod.Round.RoundNumber)
+            .ToListAsync();
 }

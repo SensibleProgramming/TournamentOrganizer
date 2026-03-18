@@ -1,4 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartData, ChartOptions } from 'chart.js';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -11,14 +13,19 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDialog } from '@angular/material/dialog';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { CardDemandDialogComponent } from './dialogs/card-demand-dialog.component';
 import { ApiService } from '../../core/services/api.service';
+import { ScryfallService } from '../../core/services/scryfall.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PlayerService } from '../../core/services/player.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto } from '../../core/models/api.models';
+import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto } from '../../core/models/api.models';
 import { RatingBadgeComponent } from '../../shared/components/rating-badge.component';
 import { PlacementBadgeComponent } from '../../shared/components/placement-badge.component';
 
@@ -28,10 +35,45 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatTableModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSnackBarModule, MatTooltipModule, MatPaginatorModule,
-    RatingBadgeComponent, PlacementBadgeComponent
+    MatProgressSpinnerModule, MatAutocompleteModule,
+    RatingBadgeComponent, PlacementBadgeComponent,
+    BaseChartDirective,
   ],
   template: `
     @if (profile) {
+      <div class="avatar-section">
+        @if (profile.avatarUrl) {
+          <img [src]="profile.avatarUrl" alt="Avatar" class="player-avatar" />
+        } @else {
+          <div class="player-avatar player-avatar-placeholder">
+            <mat-icon>person</mat-icon>
+          </div>
+        }
+        @if (canManageAvatar) {
+          <div class="avatar-actions">
+            <button mat-icon-button
+                    matTooltip="Upload avatar"
+                    (click)="avatarInput.click()"
+                    [disabled]="uploadingAvatar">
+              <mat-icon>upload</mat-icon>
+            </button>
+            <input #avatarInput
+                   type="file"
+                   accept=".png,.jpg,.jpeg,.gif,.webp"
+                   style="display:none"
+                   (change)="onAvatarFileSelected($event)" />
+            @if (profile.avatarUrl) {
+              <button mat-icon-button
+                      matTooltip="Remove avatar"
+                      color="warn"
+                      (click)="removeAvatar()">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
       <div class="profile-header">
         @if (isEditing) {
           <div class="edit-form">
@@ -70,6 +112,42 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
           </div>
         </div>
       </div>
+
+      @if (commanderStats.length) {
+        <div class="commander-stats-section">
+          <h3>My Commanders</h3>
+          <mat-card>
+            <mat-card-content>
+              <table mat-table [dataSource]="commanderStats" class="full-width">
+                <ng-container matColumnDef="commanderName">
+                  <th mat-header-cell *matHeaderCellDef>Commander(s)</th>
+                  <td mat-cell *matCellDef="let row">{{ row.commanderName }}</td>
+                </ng-container>
+                <ng-container matColumnDef="gamesPlayed">
+                  <th mat-header-cell *matHeaderCellDef>Games</th>
+                  <td mat-cell *matCellDef="let row">{{ row.gamesPlayed }}</td>
+                </ng-container>
+                <ng-container matColumnDef="wins">
+                  <th mat-header-cell *matHeaderCellDef>Wins</th>
+                  <td mat-cell *matCellDef="let row">{{ row.wins }}</td>
+                </ng-container>
+                <ng-container matColumnDef="winPct">
+                  <th mat-header-cell *matHeaderCellDef>Win %</th>
+                  <td mat-cell *matCellDef="let row">
+                    {{ row.gamesPlayed > 0 ? (row.wins / row.gamesPlayed * 100).toFixed(1) : '0.0' }}%
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="avgFinish">
+                  <th mat-header-cell *matHeaderCellDef>Avg Finish</th>
+                  <td mat-cell *matCellDef="let row">{{ row.avgFinish | number:'1.1-2' }}</td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="commanderColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: commanderColumns;"></tr>
+              </table>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
 
       <mat-tab-group>
 
@@ -136,24 +214,34 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
 
               <!-- Wishlist sub-tab -->
               <mat-tab label="Wishlist ({{ wishlist.length }})">
-                <div class="tab-content">
+                <div class="tab-content" (click)="dismissCard()">
                   @if (canEditProfile) {
                     <div class="add-card-form">
                       <mat-form-field>
                         <mat-label>Card name</mat-label>
-                        <input matInput [(ngModel)]="newWishlistCard" (keydown.enter)="addToWishlist()" placeholder="e.g. Lightning Bolt">
+                        <input matInput
+                               [(ngModel)]="newWishlistCard"
+                               [matAutocomplete]="wishlistAuto"
+                               (ngModelChange)="onWishlistCardChange($event)"
+                               (keydown.enter)="addToWishlist()"
+                               placeholder="e.g. Lightning Bolt">
+                        <mat-autocomplete #wishlistAuto="matAutocomplete">
+                          @for (s of wishlistSuggestions; track s) {
+                            <mat-option [value]="s">{{ s }}</mat-option>
+                          }
+                        </mat-autocomplete>
                       </mat-form-field>
                       <mat-form-field class="qty-field">
                         <mat-label>Qty</mat-label>
                         <input matInput type="number" [(ngModel)]="newWishlistQty" min="1">
                       </mat-form-field>
-                      <button mat-raised-button color="primary" (click)="addToWishlist()" [disabled]="!newWishlistCard.trim()">
+                      <button mat-raised-button color="primary" (click)="addToWishlist(); $event.stopPropagation()" [disabled]="!newWishlistCard.trim()">
                         <mat-icon>add</mat-icon> Add
                       </button>
-                      <button mat-stroked-button (click)="wishlistFileInput.click()">
+                      <button mat-stroked-button (click)="wishlistFileInput.click(); $event.stopPropagation()">
                         <mat-icon>upload_file</mat-icon> Bulk Import
                       </button>
-                      <button mat-stroked-button color="warn" (click)="removeAllFromWishlist()" [disabled]="wishlist.length === 0">
+                      <button mat-stroked-button color="warn" (click)="removeAllFromWishlist(); $event.stopPropagation()" [disabled]="wishlist.length === 0">
                         <mat-icon>delete_sweep</mat-icon> Remove All
                       </button>
                       <input #wishlistFileInput type="file" accept=".txt" style="display:none"
@@ -161,54 +249,90 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
                     </div>
                   }
 
-                  @if (wishlist.length > 0) {
-                    <mat-card>
-                      <mat-card-content>
-                        <table mat-table [dataSource]="wishlist" class="full-width">
-                          <ng-container matColumnDef="cardName">
-                            <th mat-header-cell *matHeaderCellDef>Card</th>
-                            <td mat-cell *matCellDef="let row">{{ row.cardName }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="quantity">
-                            <th mat-header-cell *matHeaderCellDef>Qty</th>
-                            <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="price">
-                            <th mat-header-cell *matHeaderCellDef>Price (USD)</th>
-                            <td mat-cell *matCellDef="let row">
-                              {{ row.usdPrice != null ? ('$' + (row.usdPrice | number:'1.2-2')) : '-' }}
-                            </td>
-                          </ng-container>
-                          <ng-container matColumnDef="sellers">
-                            <th mat-header-cell *matHeaderCellDef>Available from</th>
-                            <td mat-cell *matCellDef="let row">
-                              @if (wishlistSupply.get(row.cardName.toLowerCase())?.length) {
-                                <span class="sellers-list"
-                                      [matTooltip]="wishlistSupply.get(row.cardName.toLowerCase())!.join(', ')">
-                                  <mat-icon class="sellers-icon">swap_horiz</mat-icon>
-                                  {{ wishlistSupply.get(row.cardName.toLowerCase())!.join(', ') }}
-                                </span>
-                              } @else {
-                                <span class="no-sellers">—</span>
-                              }
-                            </td>
-                          </ng-container>
-                          <ng-container matColumnDef="remove">
-                            <th mat-header-cell *matHeaderCellDef></th>
-                            <td mat-cell *matCellDef="let row">
-                              <button mat-icon-button color="warn" (click)="removeFromWishlist(row.id)">
-                                <mat-icon>delete</mat-icon>
-                              </button>
-                            </td>
-                          </ng-container>
-                          <tr mat-header-row *matHeaderRowDef="cardColumns"></tr>
-                          <tr mat-row *matRowDef="let row; columns: cardColumns;"></tr>
-                        </table>
-                      </mat-card-content>
-                    </mat-card>
-                  } @else {
-                    <p class="empty-state">No cards on wishlist yet.</p>
-                  }
+                  <div class="card-list-layout">
+                    @if (selectedCardName) {
+                      <div class="card-preview-panel" (click)="$event.stopPropagation()">
+                        @if (selectedCardLoading) {
+                          <div class="card-preview-loading"><mat-spinner diameter="40"></mat-spinner></div>
+                        } @else if (selectedCard) {
+                          <img class="card-preview-img" [src]="getCardImageUrl()" [alt]="selectedCard.name">
+                          <div class="card-preview-prices">
+                            <span><strong>Normal:</strong> {{ selectedCard.prices.usd ? '$' + selectedCard.prices.usd : 'N/A' }}</span>
+                            <span><strong>Foil:</strong> {{ selectedCard.prices.usd_foil ? '$' + selectedCard.prices.usd_foil : 'N/A' }}</span>
+                          </div>
+                          <div class="card-preview-links">
+                            @if (getStorePortalUrl(selectedCard.name); as portalUrl) {
+                              <a [href]="portalUrl" target="_blank" rel="noopener" mat-stroked-button class="buy-link">
+                                <mat-icon>store</mat-icon> {{ storeNameForPortal ?? 'Store' }}
+                              </a>
+                            }
+                            @if (selectedCard.purchase_uris.tcgplayer) {
+                              <a [href]="selectedCard.purchase_uris.tcgplayer" target="_blank" rel="noopener" mat-stroked-button class="buy-link">TCGplayer</a>
+                            }
+                            @if (selectedCard.purchase_uris.cardkingdom) {
+                              <a [href]="selectedCard.purchase_uris.cardkingdom" target="_blank" rel="noopener" mat-stroked-button class="buy-link">Card Kingdom</a>
+                            }
+                            <a [href]="getManapoolUrl(selectedCard.name)" target="_blank" rel="noopener" mat-stroked-button class="buy-link">Manapool</a>
+                          </div>
+                        } @else {
+                          <p class="card-preview-not-found">Card not found.</p>
+                        }
+                      </div>
+                    }
+
+                    <div class="card-list-area">
+                      @if (wishlist.length > 0) {
+                        <mat-card>
+                          <mat-card-content>
+                            <table mat-table [dataSource]="wishlist" class="full-width">
+                              <ng-container matColumnDef="cardName">
+                                <th mat-header-cell *matHeaderCellDef>Card</th>
+                                <td mat-cell *matCellDef="let row">
+                                  <button mat-button class="card-name-btn" (click)="onCardClick(row.cardName, $event)">{{ row.cardName }}</button>
+                                </td>
+                              </ng-container>
+                              <ng-container matColumnDef="quantity">
+                                <th mat-header-cell *matHeaderCellDef>Qty</th>
+                                <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
+                              </ng-container>
+                              <ng-container matColumnDef="price">
+                                <th mat-header-cell *matHeaderCellDef>Price (USD)</th>
+                                <td mat-cell *matCellDef="let row">
+                                  {{ row.usdPrice != null ? ('$' + (row.usdPrice | number:'1.2-2')) : '-' }}
+                                </td>
+                              </ng-container>
+                              <ng-container matColumnDef="sellers">
+                                <th mat-header-cell *matHeaderCellDef>Available from</th>
+                                <td mat-cell *matCellDef="let row">
+                                  @if (wishlistSupply.get(row.cardName.toLowerCase())?.length) {
+                                    <span class="sellers-list"
+                                          [matTooltip]="wishlistSupply.get(row.cardName.toLowerCase())!.join(', ')">
+                                      <mat-icon class="sellers-icon">swap_horiz</mat-icon>
+                                      {{ wishlistSupply.get(row.cardName.toLowerCase())!.join(', ') }}
+                                    </span>
+                                  } @else {
+                                    <span class="no-sellers">—</span>
+                                  }
+                                </td>
+                              </ng-container>
+                              <ng-container matColumnDef="remove">
+                                <th mat-header-cell *matHeaderCellDef></th>
+                                <td mat-cell *matCellDef="let row">
+                                  <button mat-icon-button color="warn" (click)="removeFromWishlist(row.id); $event.stopPropagation()">
+                                    <mat-icon>delete</mat-icon>
+                                  </button>
+                                </td>
+                              </ng-container>
+                              <tr mat-header-row *matHeaderRowDef="cardColumns"></tr>
+                              <tr mat-row *matRowDef="let row; columns: cardColumns;"></tr>
+                            </table>
+                          </mat-card-content>
+                        </mat-card>
+                      } @else {
+                        <p class="empty-state">No cards on wishlist yet.</p>
+                      }
+                    </div>
+                  </div>
                 </div>
               </mat-tab>
 
@@ -220,24 +344,34 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
                   <span class="legend-item"><mat-icon style="color:#ff9800;font-size:18px;vertical-align:middle">bolt</mat-icon> 50–99%</span>
                   <span class="legend-item"><mat-icon style="color:#f44336;font-size:18px;vertical-align:middle">whatshot</mat-icon> 100%</span>
                 </div>
-                <div class="tab-content">
+                <div class="tab-content" (click)="dismissCard()">
                   @if (canEditProfile) {
                     <div class="add-card-form">
                       <mat-form-field>
                         <mat-label>Card name</mat-label>
-                        <input matInput [(ngModel)]="newTradeCard" (keydown.enter)="addToTradeList()" placeholder="e.g. Sol Ring">
+                        <input matInput
+                               [(ngModel)]="newTradeCard"
+                               [matAutocomplete]="tradeAuto"
+                               (ngModelChange)="onTradeCardChange($event)"
+                               (keydown.enter)="addToTradeList()"
+                               placeholder="e.g. Sol Ring">
+                        <mat-autocomplete #tradeAuto="matAutocomplete">
+                          @for (s of tradeSuggestions; track s) {
+                            <mat-option [value]="s">{{ s }}</mat-option>
+                          }
+                        </mat-autocomplete>
                       </mat-form-field>
                       <mat-form-field class="qty-field">
                         <mat-label>Qty</mat-label>
                         <input matInput type="number" [(ngModel)]="newTradeQty" min="1">
                       </mat-form-field>
-                      <button mat-raised-button color="accent" (click)="addToTradeList()" [disabled]="!newTradeCard.trim()">
+                      <button mat-raised-button color="accent" (click)="addToTradeList(); $event.stopPropagation()" [disabled]="!newTradeCard.trim()">
                         <mat-icon>add</mat-icon> Add
                       </button>
-                      <button mat-stroked-button (click)="tradeFileInput.click()">
+                      <button mat-stroked-button (click)="tradeFileInput.click(); $event.stopPropagation()">
                         <mat-icon>upload_file</mat-icon> Bulk Import
                       </button>
-                      <button mat-stroked-button color="warn" (click)="removeAllFromTradeList()" [disabled]="tradeList.length === 0">
+                      <button mat-stroked-button color="warn" (click)="removeAllFromTradeList(); $event.stopPropagation()" [disabled]="tradeList.length === 0">
                         <mat-icon>delete_sweep</mat-icon> Remove All
                       </button>
                       <input #tradeFileInput type="file" accept=".txt" style="display:none"
@@ -245,51 +379,85 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
                     </div>
                   }
 
-                  @if (tradeList.length > 0) {
-                    <mat-card>
-                      <mat-card-content>
-                        <table mat-table [dataSource]="tradeList" class="full-width">
-                          <ng-container matColumnDef="demand">
-                            <th mat-header-cell *matHeaderCellDef></th>
-                            <td mat-cell *matCellDef="let row" class="demand-cell">
-                              @if (getDemandIcon(row.cardName); as icon) {
-                                <mat-icon [attr.style]="getDemandStyle(row.cardName)"
-                                          [matTooltip]="getDemandTooltip(row.cardName)">{{ icon }}</mat-icon>
-                              }
-                            </td>
-                          </ng-container>
-                          <ng-container matColumnDef="cardName">
-                            <th mat-header-cell *matHeaderCellDef>Card</th>
-                            <td mat-cell *matCellDef="let row">
-                              <button mat-button class="card-name-btn" (click)="openDemandDialog(row.cardName)">{{ row.cardName }}</button>
-                            </td>
-                          </ng-container>
-                          <ng-container matColumnDef="quantity">
-                            <th mat-header-cell *matHeaderCellDef>Qty</th>
-                            <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="price">
-                            <th mat-header-cell *matHeaderCellDef>Price (USD)</th>
-                            <td mat-cell *matCellDef="let row">
-                              {{ row.usdPrice != null ? ('$' + (row.usdPrice | number:'1.2-2')) : '-' }}
-                            </td>
-                          </ng-container>
-                          <ng-container matColumnDef="remove">
-                            <th mat-header-cell *matHeaderCellDef></th>
-                            <td mat-cell *matCellDef="let row">
-                              <button mat-icon-button color="warn" (click)="removeFromTradeList(row.id)">
-                                <mat-icon>delete</mat-icon>
-                              </button>
-                            </td>
-                          </ng-container>
-                          <tr mat-header-row *matHeaderRowDef="tradeColumns"></tr>
-                          <tr mat-row *matRowDef="let row; columns: tradeColumns;"></tr>
-                        </table>
-                      </mat-card-content>
-                    </mat-card>
-                  } @else {
-                    <p class="empty-state">No cards listed for trade yet.</p>
-                  }
+                  <div class="card-list-layout">
+                    @if (selectedCardName) {
+                      <div class="card-preview-panel" (click)="$event.stopPropagation()">
+                        @if (selectedCardLoading) {
+                          <div class="card-preview-loading"><mat-spinner diameter="40"></mat-spinner></div>
+                        } @else if (selectedCard) {
+                          <img class="card-preview-img" [src]="getCardImageUrl()" [alt]="selectedCard.name">
+                          <div class="card-preview-prices">
+                            <span><strong>Normal:</strong> {{ selectedCard.prices.usd ? '$' + selectedCard.prices.usd : 'N/A' }}</span>
+                            <span><strong>Foil:</strong> {{ selectedCard.prices.usd_foil ? '$' + selectedCard.prices.usd_foil : 'N/A' }}</span>
+                          </div>
+                          <div class="card-preview-links">
+                            @if (getStorePortalUrl(selectedCard.name); as portalUrl) {
+                              <a [href]="portalUrl" target="_blank" rel="noopener" mat-stroked-button class="buy-link">
+                                <mat-icon>store</mat-icon> {{ storeNameForPortal ?? 'Store' }}
+                              </a>
+                            }
+                            @if (selectedCard.purchase_uris.tcgplayer) {
+                              <a [href]="selectedCard.purchase_uris.tcgplayer" target="_blank" rel="noopener" mat-stroked-button class="buy-link">TCGplayer</a>
+                            }
+                            @if (selectedCard.purchase_uris.cardkingdom) {
+                              <a [href]="selectedCard.purchase_uris.cardkingdom" target="_blank" rel="noopener" mat-stroked-button class="buy-link">Card Kingdom</a>
+                            }
+                            <a [href]="getManapoolUrl(selectedCard.name)" target="_blank" rel="noopener" mat-stroked-button class="buy-link">Manapool</a>
+                          </div>
+                        } @else {
+                          <p class="card-preview-not-found">Card not found.</p>
+                        }
+                      </div>
+                    }
+
+                    <div class="card-list-area">
+                      @if (tradeList.length > 0) {
+                        <mat-card>
+                          <mat-card-content>
+                            <table mat-table [dataSource]="tradeList" class="full-width">
+                              <ng-container matColumnDef="demand">
+                                <th mat-header-cell *matHeaderCellDef></th>
+                                <td mat-cell *matCellDef="let row" class="demand-cell">
+                                  @if (getDemandIcon(row.cardName); as icon) {
+                                    <mat-icon [attr.style]="getDemandStyle(row.cardName)"
+                                              [matTooltip]="getDemandTooltip(row.cardName)">{{ icon }}</mat-icon>
+                                  }
+                                </td>
+                              </ng-container>
+                              <ng-container matColumnDef="cardName">
+                                <th mat-header-cell *matHeaderCellDef>Card</th>
+                                <td mat-cell *matCellDef="let row">
+                                  <button mat-button class="card-name-btn" (click)="onCardClick(row.cardName, $event); openDemandDialog(row.cardName)">{{ row.cardName }}</button>
+                                </td>
+                              </ng-container>
+                              <ng-container matColumnDef="quantity">
+                                <th mat-header-cell *matHeaderCellDef>Qty</th>
+                                <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
+                              </ng-container>
+                              <ng-container matColumnDef="price">
+                                <th mat-header-cell *matHeaderCellDef>Price (USD)</th>
+                                <td mat-cell *matCellDef="let row">
+                                  {{ row.usdPrice != null ? ('$' + (row.usdPrice | number:'1.2-2')) : '-' }}
+                                </td>
+                              </ng-container>
+                              <ng-container matColumnDef="remove">
+                                <th mat-header-cell *matHeaderCellDef></th>
+                                <td mat-cell *matCellDef="let row">
+                                  <button mat-icon-button color="warn" (click)="removeFromTradeList(row.id); $event.stopPropagation()">
+                                    <mat-icon>delete</mat-icon>
+                                  </button>
+                                </td>
+                              </ng-container>
+                              <tr mat-header-row *matHeaderRowDef="tradeColumns"></tr>
+                              <tr mat-row *matRowDef="let row; columns: tradeColumns;"></tr>
+                            </table>
+                          </mat-card-content>
+                        </mat-card>
+                      } @else {
+                        <p class="empty-state">No cards listed for trade yet.</p>
+                      }
+                    </div>
+                  </div>
                 </div>
               </mat-tab>
 
@@ -334,10 +502,36 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
         </mat-tab>
         }
 
+        <!-- Rating History tab -->
+        <mat-tab label="Rating History">
+          <div class="tab-content rating-history-section">
+            @if (ratingHistory.length > 1) {
+              <mat-card>
+                <mat-card-content>
+                  <div class="chart-container">
+                    <canvas baseChart
+                            [data]="ratingChartData"
+                            [options]="ratingChartOptions"
+                            type="line">
+                    </canvas>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            } @else {
+              <p class="empty-state">No rating history yet — play more games to see your chart.</p>
+            }
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     }
   `,
   styles: [`
+    .avatar-section { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .player-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 2px solid var(--mat-sys-outline-variant, #ccc); }
+    .player-avatar-placeholder { display: flex; align-items: center; justify-content: center; background: var(--mat-sys-surface-variant, #e0e0e0); }
+    .player-avatar-placeholder mat-icon { font-size: 48px; width: 48px; height: 48px; }
+    .avatar-actions { display: flex; gap: 4px; }
     .profile-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
     .name-row { display: flex; align-items: center; justify-content: space-between; }
     .name-row h2 { margin: 0; }
@@ -361,10 +555,30 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     .trade-card { margin-bottom: 16px; }
     .trade-legs { display: flex; flex-direction: column; gap: 8px; }
     .trade-leg { font-size: 14px; }
+    .card-list-layout { display: flex; gap: 16px; align-items: flex-start; }
+    .card-preview-panel { width: 220px; min-width: 220px; display: flex; flex-direction: column; gap: 8px; padding: 8px; background: var(--mat-sys-surface-variant, #f5f5f5); border-radius: 8px; border: 1px solid var(--mat-sys-outline-variant, #ddd); }
+    .card-preview-img { width: 100%; border-radius: 6px; display: block; }
+    .card-preview-prices { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+    .card-preview-links { display: flex; flex-direction: column; gap: 6px; }
+    .buy-link { font-size: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .card-preview-loading { display: flex; justify-content: center; padding: 24px 0; }
+    .card-preview-not-found { color: #999; font-size: 13px; font-style: italic; text-align: center; }
+    .card-list-area { flex: 1; min-width: 0; }
+    .chart-container { position: relative; height: 200px; }
   `]
 })
 export class PlayerProfileComponent implements OnInit {
   profile: PlayerProfile | null = null;
+  commanderStats: CommanderStatDto[] = [];
+  ratingHistory: RatingSnapshotDto[] = [];
+  ratingChartData: ChartData<'line'> = { datasets: [] };
+  ratingChartOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: {
+      label: (ctx) => `Score: ${ctx.parsed.y?.toFixed(2) ?? ''}`
+    }}}
+  };
   wishlist: WishlistEntryDto[] = [];
   wishlistSupply = new Map<string, string[]>();
   tradeList: TradeEntryDto[] = [];
@@ -372,6 +586,7 @@ export class PlayerProfileComponent implements OnInit {
   tradeDemand = new Map<string, TradeCardDemandDto>();
 
   eventColumns = ['eventName', 'eventDate', 'decklist', 'commander', 'store'];
+  commanderColumns = ['commanderName', 'gamesPlayed', 'wins', 'winPct', 'avgFinish'];
   historyPageSize = 10;
   historyPageIndex = 0;
 
@@ -397,6 +612,8 @@ export class PlayerProfileComponent implements OnInit {
       : ['demand', 'cardName', 'quantity', 'price'];
   }
 
+  uploadingAvatar = false;
+
   apiOnline = true;
   isEditing = false;
   editName = '';
@@ -407,6 +624,17 @@ export class PlayerProfileComponent implements OnInit {
   newTradeCard = '';
   newTradeQty = 1;
 
+  wishlistSuggestions: string[] = [];
+  tradeSuggestions: string[] = [];
+  private wishlistQuery$ = new Subject<string>();
+  private tradeQuery$ = new Subject<string>();
+
+  selectedCard: ScryfallCard | null = null;
+  selectedCardName: string | null = null;
+  selectedCardLoading = false;
+  storeSellerPortalUrl: string | null = null;
+  storeNameForPortal: string | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private playerService: PlayerService,
@@ -415,8 +643,12 @@ export class PlayerProfileComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
     private authService: AuthService,
-    private ctx: LocalStorageContext
+    private ctx: LocalStorageContext,
+    private scryfallService: ScryfallService,
   ) {}
+
+  onWishlistCardChange(query: string): void { this.wishlistQuery$.next(query); }
+  onTradeCardChange(query: string): void    { this.tradeQuery$.next(query); }
 
   get canEditProfile(): boolean {
     const user = this.authService.currentUser;
@@ -425,11 +657,79 @@ export class PlayerProfileComponent implements OnInit {
     return user.playerId === this.profile?.id;
   }
 
+  get canManageAvatar(): boolean {
+    if (this.authService.isAdmin) return true;
+    if (this.authService.isStoreManager) return true;
+    return this.authService.currentUser?.email === this.profile?.email;
+  }
+
+  onAvatarFileSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file || !this.profile) return;
+    this.uploadingAvatar = true;
+    this.cdr.detectChanges();
+    this.apiService.uploadPlayerAvatar(this.profile.id, file).subscribe({
+      next: (dto) => {
+        this.profile!.avatarUrl = dto.avatarUrl ? `${dto.avatarUrl}?t=${Date.now()}` : null;
+        this.uploadingAvatar = false;
+        this.snackBar.open('Avatar updated.', 'Close', { duration: 3000 });
+        this.playerService.refreshPlayersFromApi().subscribe();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.uploadingAvatar = false;
+        this.snackBar.open('Upload failed. Check file type and size.', 'Close', { duration: 4000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  removeAvatar(): void {
+    if (!this.profile) return;
+    this.apiService.removePlayerAvatar(this.profile.id).subscribe({
+      next: (dto) => {
+        this.profile!.avatarUrl = dto.avatarUrl ?? null;
+        this.snackBar.open('Avatar removed.', 'Close', { duration: 3000 });
+        this.playerService.refreshPlayersFromApi().subscribe();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.snackBar.open('Failed to remove avatar.', 'Close', { duration: 4000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   ngOnInit() {
+    this.wishlistQuery$.pipe(
+      debounceTime(300), distinctUntilChanged(),
+      switchMap(q => this.scryfallService.getSuggestions(q)),
+    ).subscribe(s => { this.wishlistSuggestions = s; this.cdr.detectChanges(); });
+
+    this.tradeQuery$.pipe(
+      debounceTime(300), distinctUntilChanged(),
+      switchMap(q => this.scryfallService.getSuggestions(q)),
+    ).subscribe(s => { this.tradeSuggestions = s; this.cdr.detectChanges(); });
+
+    const storeId = this.authService.currentUser?.storeId;
+    if (storeId) {
+      this.apiService.getStore(storeId).subscribe({
+        next: store => {
+          this.storeSellerPortalUrl = store.sellerPortalUrl ?? null;
+          this.storeNameForPortal = store.storeName;
+          this.cdr.detectChanges();
+        },
+        error: () => {}
+      });
+    }
+
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.playerService.getProfile(id).subscribe({
       next: p => {
         p.eventRegistrations.sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
+        if (p.avatarUrl && !p.avatarUrl.includes('?t=')) {
+          p.avatarUrl = `${p.avatarUrl}?t=${Date.now()}`;
+        }
         this.profile = p;
         this.cdr.detectChanges();
         this.loadWishlist(id);
@@ -437,6 +737,8 @@ export class PlayerProfileComponent implements OnInit {
         this.loadTradeList(id);
         this.loadSuggestedTrades(id);
         this.loadTradeDemand(id);
+        this.loadCommanderStats(id);
+        this.loadRatingHistory(id);
       },
       error: () => {
         this.apiOnline = false;
@@ -444,11 +746,32 @@ export class PlayerProfileComponent implements OnInit {
         const cached = this.ctx.players.getById(id);
         if (cached) {
           this.profile = { ...cached, gameHistory: [], eventRegistrations: [] };
-          this.cdr.detectChanges();
         } else {
           this.snackBar.open('Player profile unavailable offline', 'OK', { duration: 3000 });
         }
+        this.cdr.detectChanges();
       }
+    });
+  }
+
+  private loadCommanderStats(playerId: number) {
+    this.apiService.getCommanderStats(playerId).subscribe({
+      next: stats => { this.commanderStats = stats.commanders; this.cdr.detectChanges(); },
+      error: () => {}
+    });
+  }
+
+  private loadRatingHistory(playerId: number) {
+    this.apiService.getRatingHistory(playerId).subscribe({
+      next: (data) => {
+        this.ratingHistory = data?.history ?? [];
+        this.ratingChartData = {
+          labels: this.ratingHistory.map(s => new Date(s.date).toLocaleDateString()),
+          datasets: [{ data: this.ratingHistory.map(s => s.conservativeScore), label: 'Rating', fill: false, tension: 0.3 }]
+        };
+        this.cdr.detectChanges();
+      },
+      error: () => {}
     });
   }
 
@@ -635,6 +958,55 @@ export class PlayerProfileComponent implements OnInit {
       },
       error: () => this.snackBar.open('Bulk import failed', 'OK', { duration: 3000 })
     });
+  }
+
+  onCardClick(cardName: string, event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.selectedCardName === cardName && this.selectedCard) {
+      this.dismissCard();
+      return;
+    }
+    this.selectedCardName = cardName;
+    this.selectedCard = null;
+    this.selectedCardLoading = true;
+    this.cdr.detectChanges();
+    this.scryfallService.getCard(cardName).subscribe({
+      next: card => {
+        this.selectedCard = card;
+        this.selectedCardLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.selectedCardLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  dismissCard(): void {
+    this.selectedCard = null;
+    this.selectedCardName = null;
+    this.cdr.detectChanges();
+  }
+
+  getCardImageUrl(): string | null {
+    if (!this.selectedCard) return null;
+    if (!this.selectedCard.image_uris && this.selectedCard.card_faces?.[0]?.image_uris) {
+      return this.selectedCard.card_faces[0].image_uris.normal;
+    }
+    return this.selectedCard.image_uris?.normal ?? null;
+  }
+
+  getManapoolUrl(cardName: string): string {
+    return `https://www.manapool.com/en/search?q=${encodeURIComponent(cardName)}`;
+  }
+
+  getStorePortalUrl(cardName: string): string | null {
+    if (!this.storeSellerPortalUrl) return null;
+    const base = this.storeSellerPortalUrl;
+    return base.includes('{q}')
+      ? base.replace('{q}', encodeURIComponent(cardName))
+      : `${base}?q=${encodeURIComponent(cardName)}`;
   }
 
   getWins(): number {

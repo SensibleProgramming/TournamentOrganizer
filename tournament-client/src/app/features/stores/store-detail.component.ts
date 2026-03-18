@@ -23,7 +23,7 @@ import { SyncService } from '../../core/services/sync.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
 import { StorageAdapter } from '../../core/services/storage-adapter.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { StoreDetailDto, AppUserDto, LicenseDto, ThemeDto } from '../../core/models/api.models';
+import { StoreDetailDto, AppUserDto, LicenseDto, ThemeDto, EventTemplateDto, CreateEventTemplateDto } from '../../core/models/api.models';
 import { StoreContextService } from '../../core/services/store-context.service';
 import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
 
@@ -43,6 +43,11 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
         <mat-icon>arrow_back</mat-icon>
       </button>
       <h2>{{ store?.storeName ?? 'Store Settings' }}</h2>
+      @if (authService.isStoreEmployee) {
+        <button mat-stroked-button [routerLink]="['/stores', storeId, 'meta']" style="margin-left:auto">
+          <mat-icon>bar_chart</mat-icon> Meta Report
+        </button>
+      }
     </div>
 
     @if (store) {
@@ -95,6 +100,32 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                         }
                       </mat-select>
                     </mat-form-field>
+                    <mat-form-field>
+                      <mat-label>Discord Webhook URL</mat-label>
+                      <input matInput
+                             type="password"
+                             placeholder="https://discord.com/api/webhooks/..."
+                             [(ngModel)]="editDiscordWebhookUrl"
+                             autocomplete="off"
+                             aria-label="Discord Webhook URL" />
+                      <mat-hint>
+                        @if (store.hasDiscordWebhook) {
+                          <span class="discord-connected"><mat-icon>check_circle</mat-icon> Connected</span>
+                        } @else {
+                          Not connected
+                        }
+                      </mat-hint>
+                    </mat-form-field>
+                    <mat-form-field>
+                      <mat-label>Seller Portal URL</mat-label>
+                      <input matInput
+                             type="url"
+                             placeholder="https://store.tcgplayer.com/..."
+                             [(ngModel)]="editSellerPortalUrl"
+                             autocomplete="off"
+                             aria-label="Seller Portal URL" />
+                      <mat-hint>Optional. Used as the buy link on card previews. Use &#123;q&#125; as a placeholder for the card name.</mat-hint>
+                    </mat-form-field>
                   }
                 </div>
               </mat-card-content>
@@ -103,6 +134,11 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                   <button mat-raised-button color="primary" (click)="save()" [disabled]="!editStoreName.trim()">
                     <mat-icon>save</mat-icon> Save
                   </button>
+                  @if (store.hasDiscordWebhook) {
+                    <button mat-stroked-button (click)="testWebhook()">
+                      <mat-icon>send</mat-icon> Test Webhook
+                    </button>
+                  }
                   <button mat-button [routerLink]="['/stores']">Cancel</button>
                 </mat-card-actions>
               }
@@ -343,6 +379,85 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
           </mat-tab>
         }
 
+        <!-- ── Tab 5: Templates (StoreManager+) ─────────────── -->
+        @if (authService.isStoreManager) {
+          <mat-tab label="Templates">
+            <div class="tab-content">
+
+              <!-- New Template form -->
+              @if (showNewTemplateForm) {
+                <mat-card class="add-card">
+                  <mat-card-header><mat-card-title>New Template</mat-card-title></mat-card-header>
+                  <mat-card-content>
+                    <div class="form-column">
+                      <mat-form-field>
+                        <mat-label>Template Name</mat-label>
+                        <input matInput [(ngModel)]="newTemplateName" placeholder="Friday Night Commander">
+                      </mat-form-field>
+                      <mat-form-field>
+                        <mat-label>Description</mat-label>
+                        <input matInput [(ngModel)]="newTemplateDescription" placeholder="Optional description">
+                      </mat-form-field>
+                      <mat-form-field>
+                        <mat-label>Format</mat-label>
+                        <input matInput [(ngModel)]="newTemplateFormat" placeholder="Commander">
+                      </mat-form-field>
+                      <mat-form-field class="short-field">
+                        <mat-label>Max Players</mat-label>
+                        <input matInput type="number" [(ngModel)]="newTemplateMaxPlayers" min="2">
+                      </mat-form-field>
+                      <mat-form-field class="short-field">
+                        <mat-label>Number of Rounds</mat-label>
+                        <input matInput type="number" [(ngModel)]="newTemplateRounds" min="1">
+                      </mat-form-field>
+                    </div>
+                  </mat-card-content>
+                  <mat-card-actions>
+                    <button mat-raised-button color="primary"
+                            (click)="saveTemplate()"
+                            [disabled]="!newTemplateName.trim()">
+                      Save Template
+                    </button>
+                    <button mat-button (click)="cancelNewTemplate()">Cancel</button>
+                  </mat-card-actions>
+                </mat-card>
+              } @else {
+                <button mat-raised-button color="primary" (click)="startNewTemplate()">
+                  <mat-icon>add</mat-icon> New Template
+                </button>
+              }
+
+              <!-- Template list -->
+              @if (templates.length > 0) {
+                <div class="template-list">
+                  @for (t of templates; track t.id) {
+                    <mat-card class="template-card">
+                      <mat-card-header>
+                        <mat-card-title>{{ t.name }}</mat-card-title>
+                        <mat-card-subtitle>{{ t.format }}</mat-card-subtitle>
+                      </mat-card-header>
+                      <mat-card-content>
+                        <span>{{ t.maxPlayers }} players · {{ t.numberOfRounds }} rounds</span>
+                        @if (t.description) {
+                          <p class="template-desc">{{ t.description }}</p>
+                        }
+                      </mat-card-content>
+                      <mat-card-actions>
+                        <button mat-button color="warn" (click)="deleteTemplate(t.id)">
+                          <mat-icon>delete</mat-icon> Delete
+                        </button>
+                      </mat-card-actions>
+                    </mat-card>
+                  }
+                </div>
+              } @else if (!showNewTemplateForm) {
+                <p class="empty-state">No templates yet. Click "New Template" to create one.</p>
+              }
+
+            </div>
+          </mat-tab>
+        }
+
       </mat-tab-group>
     } @else {
       <p class="empty-state">Loading...</p>
@@ -366,6 +481,12 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
     .action-row { display: flex; align-items: center; gap: 16px; padding: 16px 0; }
     .action-desc { color: #666; font-size: 13px; flex: 1; }
     mat-divider { margin: 0; }
+    .discord-connected { display: flex; align-items: center; gap: 4px; color: #1976d2; }
+    .discord-connected mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .template-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+    .template-card { max-width: 520px; }
+    .template-desc { color: #666; font-size: 13px; margin: 4px 0 0; }
+    .short-field { width: 160px; }
   `]
 })
 export class StoreDetailComponent implements OnInit {
@@ -384,6 +505,19 @@ export class StoreDetailComponent implements OnInit {
   // Theme
   themes: ThemeDto[] = [];
   selectedThemeId: number | null = null;
+
+  // Discord
+  editDiscordWebhookUrl = '';
+  editSellerPortalUrl = '';
+
+  // Templates
+  templates: EventTemplateDto[] = [];
+  showNewTemplateForm = false;
+  newTemplateName = '';
+  newTemplateDescription = '';
+  newTemplateFormat = 'Commander';
+  newTemplateMaxPlayers = 16;
+  newTemplateRounds = 4;
 
   // License
   license: LicenseDto | null = null;
@@ -446,6 +580,7 @@ export class StoreDetailComponent implements OnInit {
         this.editStoreName = store.storeName;
         this.editDifferential = store.allowableTradeDifferential;
         this.selectedThemeId = store.themeId ?? null;
+        this.editSellerPortalUrl = store.sellerPortalUrl ?? '';
         if (store.license) {
           this.license = store.license;
           this.editLicenseKey = store.license.appKey;
@@ -454,9 +589,10 @@ export class StoreDetailComponent implements OnInit {
           this.editLicenseActive = store.license.isActive;
         }
         this.cdr.detectChanges();
-        // Only load employees after confirming the API is reachable.
+        // Only load employees and templates after confirming the API is reachable.
         if (this.authService.isStoreManager) {
           this.loadEmployees();
+          this.loadTemplates();
         }
       },
       error: () => {
@@ -490,7 +626,9 @@ export class StoreDetailComponent implements OnInit {
     this.apiService.updateStore(this.storeId, {
       storeName: this.editStoreName.trim(),
       allowableTradeDifferential: this.editDifferential,
-      themeId: this.selectedThemeId
+      themeId: this.selectedThemeId,
+      discordWebhookUrl: this.editDiscordWebhookUrl || null,
+      sellerPortalUrl: this.editSellerPortalUrl || null
     }).subscribe({
       next: updated => {
         this.store = updated.logoUrl
@@ -521,6 +659,13 @@ export class StoreDetailComponent implements OnInit {
       this.ctx.stores.markClean(this.storeId);
     }
     this.storeContext.storesChanged$.next();
+  }
+
+  testWebhook() {
+    this.apiService.testDiscordWebhook(this.storeId).subscribe({
+      next: () => this.snackBar.open('Test message sent to Discord!', 'OK', { duration: 3000 }),
+      error: () => this.snackBar.open('Failed to send test message', 'OK', { duration: 3000 })
+    });
   }
 
   // ── Employees ─────────────────────────────────────────────────────────────
@@ -614,6 +759,63 @@ export class StoreDetailComponent implements OnInit {
         this.snackBar.open('Employee removed (will sync when online)', 'OK', { duration: 3000 });
         this.cdr.detectChanges();
       }
+    });
+  }
+
+  // ── Templates ─────────────────────────────────────────────────────────────
+
+  private loadTemplates(): void {
+    this.apiService.getEventTemplates(this.storeId).subscribe({
+      next: templates => {
+        this.templates = templates;
+        this.cdr.detectChanges();
+      },
+      error: () => { /* silently ignore — templates are non-critical */ }
+    });
+  }
+
+  startNewTemplate(): void {
+    this.showNewTemplateForm = true;
+    this.newTemplateName = '';
+    this.newTemplateDescription = '';
+    this.newTemplateFormat = 'Commander';
+    this.newTemplateMaxPlayers = 16;
+    this.newTemplateRounds = 4;
+    this.cdr.detectChanges();
+  }
+
+  cancelNewTemplate(): void {
+    this.showNewTemplateForm = false;
+    this.cdr.detectChanges();
+  }
+
+  saveTemplate(): void {
+    if (!this.newTemplateName.trim()) return;
+    const dto: CreateEventTemplateDto = {
+      name:           this.newTemplateName.trim(),
+      description:    this.newTemplateDescription.trim() || null,
+      format:         this.newTemplateFormat.trim() || 'Commander',
+      maxPlayers:     this.newTemplateMaxPlayers,
+      numberOfRounds: this.newTemplateRounds,
+    };
+    this.apiService.createEventTemplate(this.storeId, dto).subscribe({
+      next: created => {
+        this.templates = [...this.templates, created];
+        this.showNewTemplateForm = false;
+        this.snackBar.open('Template created!', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      },
+      error: () => this.snackBar.open('Failed to create template', 'OK', { duration: 3000 })
+    });
+  }
+
+  deleteTemplate(id: number): void {
+    this.apiService.deleteEventTemplate(this.storeId, id).subscribe({
+      next: () => {
+        this.templates = this.templates.filter(t => t.id !== id);
+        this.cdr.detectChanges();
+      },
+      error: () => this.snackBar.open('Failed to delete template', 'OK', { duration: 3000 })
     });
   }
 

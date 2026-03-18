@@ -14,13 +14,20 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/ma
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import * as QRCode from 'qrcode';
 import { EventService } from '../../core/services/event.service';
 import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
-import { EventDto, RoundDto, StandingsEntry, EventPlayerDto, PlayerDto, POINT_SYSTEM_LABELS } from '../../core/models/api.models';
+import { ScryfallService } from '../../core/services/scryfall.service';
+import {
+  EventDto, RoundDto, StandingsEntry, EventPlayerDto, PlayerDto, POINT_SYSTEM_LABELS,
+} from '../../core/models/api.models';
 import { PodCardComponent, PodResultState } from './pod-card.component';
 import { EventStandingsComponent } from './event-standings.component';
+import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.component';
 
 @Component({
   selector: 'app-event-detail',
@@ -30,7 +37,7 @@ import { EventStandingsComponent } from './event-standings.component';
     MatTableModule, MatChipsModule, MatExpansionModule, MatIconModule,
     MatAutocompleteModule, MatSnackBarModule,
     PodCardComponent, EventStandingsComponent,
-    MatCheckboxModule, MatCardModule,
+    MatCheckboxModule, MatCardModule, MatDialogModule,
   ],
   template: `
     @if (event) {
@@ -148,8 +155,30 @@ import { EventStandingsComponent } from './event-standings.component';
                     <input matInput [(ngModel)]="decklistUrl" placeholder="https://...">
                   </mat-form-field>
                   <mat-form-field>
-                    <mat-label>Commander(s) (optional)</mat-label>
-                    <input matInput [(ngModel)]="commandersInput" placeholder="e.g. Atraxa, Praetors' Voice">
+                    <mat-label>Commander (optional)</mat-label>
+                    <input matInput
+                           [(ngModel)]="commandersInput"
+                           [matAutocomplete]="commanderRegAuto"
+                           (ngModelChange)="onCommanderInputChange($event)"
+                           placeholder="e.g. Atraxa, Praetors' Voice">
+                    <mat-autocomplete #commanderRegAuto="matAutocomplete">
+                      @for (s of commanderSuggestions; track s) {
+                        <mat-option [value]="s">{{ s }}</mat-option>
+                      }
+                    </mat-autocomplete>
+                  </mat-form-field>
+                  <mat-form-field>
+                    <mat-label>Partner Commander (optional)</mat-label>
+                    <input matInput
+                           [(ngModel)]="commandersInput2"
+                           [matAutocomplete]="commanderPartnerRegAuto"
+                           (ngModelChange)="onPartnerInputChange($event)"
+                           placeholder="e.g. Akiri, Line-Slinger">
+                    <mat-autocomplete #commanderPartnerRegAuto="matAutocomplete">
+                      @for (s of commanderPartnerSuggestions; track s) {
+                        <mat-option [value]="s">{{ s }}</mat-option>
+                      }
+                    </mat-autocomplete>
                   </mat-form-field>
                   <button mat-raised-button color="primary" (click)="registerPlayer()" [disabled]="!playerIdToRegister">
                     {{ isEventFull ? 'Add to Waitlist' : 'Register Player' }}
@@ -162,6 +191,13 @@ import { EventStandingsComponent } from './event-standings.component';
                     </button>
                   </div>
                 }
+
+                <!-- ── Bulk Register ── -->
+                <div class="bulk-register-section">
+                  <button mat-stroked-button (click)="openBulkRegisterDialog()">
+                    <mat-icon>group_add</mat-icon> Bulk Register Players
+                  </button>
+                </div>
               }
               @if (!authService.isStoreEmployee && authService.currentUser?.playerId && !isAlreadyRegistered(authService.currentUser!.playerId!) && !isEventFull) {
                 <div class="self-register-row">
@@ -224,11 +260,34 @@ import { EventStandingsComponent } from './event-standings.component';
                         <td mat-cell *matCellDef="let row">
                           @if (editingCommanderPlayerId === row.playerId) {
                             <div class="commander-edit">
-                              <input matInput [(ngModel)]="editCommanderValue"
-                                     placeholder="Commander name"
-                                     class="commander-input"
-                                     (keyup.enter)="saveCommander(row)"
-                                     (keyup.escape)="cancelEditCommander()">
+                              <mat-form-field class="commander-inline-field">
+                                <input matInput
+                                       [(ngModel)]="editCommanderValue"
+                                       [matAutocomplete]="commanderEditAuto"
+                                       (ngModelChange)="onCommanderInputChange($event)"
+                                       placeholder="Commander name"
+                                       (keyup.enter)="saveCommander(row)"
+                                       (keyup.escape)="cancelEditCommander()">
+                                <mat-autocomplete #commanderEditAuto="matAutocomplete">
+                                  @for (s of commanderSuggestions; track s) {
+                                    <mat-option [value]="s">{{ s }}</mat-option>
+                                  }
+                                </mat-autocomplete>
+                              </mat-form-field>
+                              <mat-form-field class="commander-inline-field">
+                                <input matInput
+                                       [(ngModel)]="editCommanderValue2"
+                                       [matAutocomplete]="commanderPartnerEditAuto"
+                                       (ngModelChange)="onPartnerInputChange($event)"
+                                       placeholder="Partner (optional)"
+                                       (keyup.enter)="saveCommander(row)"
+                                       (keyup.escape)="cancelEditCommander()">
+                                <mat-autocomplete #commanderPartnerEditAuto="matAutocomplete">
+                                  @for (s of commanderPartnerSuggestions; track s) {
+                                    <mat-option [value]="s">{{ s }}</mat-option>
+                                  }
+                                </mat-autocomplete>
+                              </mat-form-field>
                               <button mat-icon-button color="primary" (click)="saveCommander(row)" title="Save">
                                 <mat-icon>check</mat-icon>
                               </button>
@@ -437,7 +496,7 @@ import { EventStandingsComponent } from './event-standings.component';
     .waitlist-row { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
     .index-col { width: 36px; min-width: 36px; color: #888; font-size: 0.85rem; padding-right: 4px; }
     .commander-edit { display: flex; align-items: center; gap: 4px; }
-    .commander-input { width: 160px; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; }
+    .commander-inline-field { width: 180px; font-size: 0.9rem; }
     .edit-commander-btn { opacity: 0.4; transition: opacity 0.15s; }
     .edit-commander-btn:hover { opacity: 1; }
   `]
@@ -453,6 +512,7 @@ export class EventDetailComponent implements OnInit {
   playerSearchText: string = '';
   decklistUrl: string | null = null;
   commandersInput: string = '';
+  commandersInput2: string = '';
   readonly playerColumns = ['index', 'name', 'decklist', 'commander', 'status', 'actions'];
   private readonly PLAYERS_TAB = 0;
 
@@ -470,6 +530,14 @@ export class EventDetailComponent implements OnInit {
 
   editingCommanderPlayerId: number | null = null;
   editCommanderValue = '';
+  editCommanderValue2 = '';
+
+  commanderSuggestions: string[] = [];
+  commanderPartnerSuggestions: string[] = [];
+  private commanderQuery$ = new Subject<string>();
+  private commanderPartnerQuery$ = new Subject<string>();
+
+  private registeredPlayerIds = new Set<number>();
 
   constructor(
     private route: ActivatedRoute,
@@ -478,13 +546,49 @@ export class EventDetailComponent implements OnInit {
     private playerService: PlayerService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
-    public authService: AuthService
+    public authService: AuthService,
+    private dialog: MatDialog,
+    private scryfallService: ScryfallService,
   ) {}
 
   ngOnInit() {
     this.eventId = Number(this.route.snapshot.paramMap.get('id'));
+    if (this.eventId < 0) {
+      this.snackBar.open('This event was created offline and has not yet synced to the server.', 'OK', { duration: 5000 });
+      this.router.navigate(['/events']);
+      return;
+    }
+    this.commanderQuery$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(q => this.scryfallService.getSuggestions(q)),
+    ).subscribe(suggestions => {
+      this.commanderSuggestions = suggestions;
+      this.cdr.detectChanges();
+    });
+    this.commanderPartnerQuery$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(q => this.scryfallService.getSuggestions(q)),
+    ).subscribe(suggestions => {
+      this.commanderPartnerSuggestions = suggestions;
+      this.cdr.detectChanges();
+    });
     this.initSubscriptions();
     this.loadData();
+  }
+
+  onCommanderInputChange(query: string): void {
+    this.commanderQuery$.next(query);
+  }
+
+  onPartnerInputChange(query: string): void {
+    this.commanderPartnerQuery$.next(query);
+  }
+
+  private buildCommandersString(cmd1: string, cmd2: string): string | null {
+    const parts = [cmd1.trim(), cmd2.trim()].filter(Boolean);
+    return parts.length ? parts.join(' / ') : null;
   }
 
   private initSubscriptions() {
@@ -495,7 +599,11 @@ export class EventDetailComponent implements OnInit {
       }
       this.cdr.detectChanges();
     });
-    this.eventService.eventPlayers$.subscribe(p => { this.eventPlayers = p; this.cdr.detectChanges(); });
+    this.eventService.eventPlayers$.subscribe(p => {
+      this.eventPlayers = p;
+      this.registeredPlayerIds = new Set(p.map(ep => ep.playerId));
+      this.cdr.detectChanges();
+    });
     this.playerService.players$.subscribe(p => { this.allPlayers = p; this.cdr.detectChanges(); });
     this.eventService.rounds$.subscribe(r => {
       this.rounds = r;
@@ -701,7 +809,7 @@ export class EventDetailComponent implements OnInit {
     this.eventService.registerPlayer(this.eventId, {
       playerId: this.playerIdToRegister,
       decklistUrl: this.decklistUrl || undefined,
-      commanders: this.commandersInput || null
+      commanders: this.buildCommandersString(this.commandersInput, this.commandersInput2)
     }).subscribe({
       next: () => {
         this.snackBar.open('Player registered!', 'OK', { duration: 3000 });
@@ -711,6 +819,7 @@ export class EventDetailComponent implements OnInit {
         this.playerSearchText = '';
         this.decklistUrl = null;
         this.commandersInput = '';
+        this.commandersInput2 = '';
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -727,24 +836,28 @@ export class EventDetailComponent implements OnInit {
 
   startEditCommander(row: EventPlayerDto): void {
     this.editingCommanderPlayerId = row.playerId;
-    this.editCommanderValue = row.commanders ?? '';
+    const parts = (row.commanders ?? '').split(' / ');
+    this.editCommanderValue = parts[0] ?? '';
+    this.editCommanderValue2 = parts[1] ?? '';
     this.cdr.detectChanges();
   }
 
   cancelEditCommander(): void {
     this.editingCommanderPlayerId = null;
     this.editCommanderValue = '';
+    this.editCommanderValue2 = '';
     this.cdr.detectChanges();
   }
 
   saveCommander(row: EventPlayerDto): void {
-    const commanders = this.editCommanderValue.trim() || null;
+    const commanders = this.buildCommandersString(this.editCommanderValue, this.editCommanderValue2);
     this.eventService.declareCommander(this.eventId, row.playerId, commanders, row.decklistUrl).subscribe({
       next: (updated) => {
         const idx = this.eventPlayers.findIndex(p => p.playerId === updated.playerId);
         if (idx >= 0) this.eventPlayers[idx] = updated;
         this.editingCommanderPlayerId = null;
         this.editCommanderValue = '';
+        this.editCommanderValue2 = '';
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -914,5 +1027,31 @@ export class EventDetailComponent implements OnInit {
     if (event.index === this.PLAYERS_TAB) {
       this.eventService.loadEventPlayers(this.eventId);
     }
+  }
+
+  // ── Bulk Register ─────────────────────────────────────────────────────────
+
+  openBulkRegisterDialog(): void {
+    const availableSlots = this.event?.maxPlayers
+      ? this.event.maxPlayers - this.event.playerCount
+      : Infinity;
+
+    const ref = this.dialog.open(BulkRegisterDialogComponent, {
+      width: '680px',
+      data: {
+        eventId: this.eventId,
+        availableSlots,
+        registeredPlayerIds: new Set(this.registeredPlayerIds),
+      },
+    });
+
+    ref.afterClosed().subscribe(result => {
+      if (!result) return;
+      const msg = `${result.registered} registered, ${result.created} new players created`;
+      this.snackBar.open(msg, 'OK', { duration: 5000 });
+      this.eventService.loadEventPlayers(this.eventId);
+      this.eventService.loadEvent(this.eventId);
+      this.cdr.detectChanges();
+    });
   }
 }

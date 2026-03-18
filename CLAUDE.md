@@ -4,6 +4,98 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 You are a Senior .NET and Angular Developer specializing in Test-Driven Development (TDD). You are working on a "Magic the Gathering" Tournament Organizer application.
 
+## Git Workflow (MANDATORY)
+
+All work follows a **feature branch → PR → dev** flow:
+
+1. **Start every task** from the `dev` branch, pulled to latest:
+   ```bash
+   git checkout dev && git pull TournamentOrganizer dev
+   ```
+2. **Create a feature branch** named after the task:
+   ```bash
+   git checkout -b feature/<short-task-name>
+   ```
+3. **Do all work on the feature branch** — commits, migrations, tests.
+4. **After all tests pass**, commit all changes and push:
+   ```bash
+   git push -u TournamentOrganizer feature/<short-task-name>
+   ```
+5. **Open or update the PR** targeting `dev`:
+   ```bash
+   # Check if a PR already exists for this branch
+   gh pr list --head feature/<short-task-name> --base dev --json number --jq '.[0].number'
+   # If a PR number is returned → the PR already exists; the push in step 4 already updated it.
+   # If no PR is returned → create one:
+   gh pr create --base dev --title "..." --body "..."
+   ```
+
+**Rules:**
+- Never commit directly to `dev` or `main`.
+- Never push to `main` — `main` is updated only via PR from `dev`.
+- Bug fixes discovered during a task go on the **same branch** as the task (additional commits), not a new branch.
+- The remote is named `TournamentOrganizer` (not `origin`).
+
+### Backlog item status (when a prompt file has a GitHub Issue link)
+
+If the prompt file for the current task contains a `> **GitHub Issue:** [#N ...]` line, update the project board at these points:
+
+| Step | Action |
+|---|---|
+| Starting work (steps 1–2) | Status → `In Progress`; assign current iteration; estimate story points |
+| PR created | Status → `In Review` |
+| PR merged to `dev` | Status → `Done` (set manually **after** verifying on dev — do NOT auto-close) |
+
+```bash
+# 1. Find the project item ID for issue #N (replace 99 with the actual issue number)
+ITEM_ID=$(gh project item-list 2 --owner sgrecoswg --format json \
+  | jq -r '.items[] | select(.content.number == 99) | .id')
+
+# 2. Set Status — use the appropriate option ID:
+#   Backlog     → f75ad846
+#   Ready       → f8227f40
+#   In Progress → 47fc9ee4
+#   In Review   → 2d25f841
+#   Done        → 98236657
+gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+  --id "$ITEM_ID" \
+  --field-id PVTSSF_lAHOBDyNN84BSBgjzg_rb-U \
+  --single-select-option-id 47fc9ee4   # ← swap option ID as needed
+
+# 3. Assign to the current iteration (determine by today's date vs startDate+duration):
+#   Iteration 1 → 449f6210  (2026-03-17, 14 days)
+#   Iteration 2 → 4ce1e9d2  (2026-03-31, 14 days)
+#   Iteration 3 → 17db6b27  (2026-04-14, 14 days)
+gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+  --id "$ITEM_ID" \
+  --field-id PVTIF_lAHOBDyNN84BSBgjzg_rc44 \
+  --iteration-id 449f6210   # ← use whichever iteration contains today's date
+
+# 4. Set story points (number field — estimate from table below):
+gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+  --id "$ITEM_ID" \
+  --field-id PVTF_lAHOBDyNN84BSBgjzg_rcXo \
+  --number 5   # ← replace with estimate
+
+# Story point guide:
+#   1 — single file, trivial change
+#   2 — 2–5 files, no new tests
+#   3 — small feature, one layer only (backend OR frontend)
+#   5 — full-stack feature, < 20 files, moderate tests
+#   8 — full-stack, 20–50 files, multiple services + E2E
+#  13 — architectural change or very large cross-cutting feature
+```
+
+### PR body convention
+
+Always include `References #N` (not `Closes #N`) in the PR body so the branch appears in the
+issue's Development section without auto-closing it. The issue is closed manually after
+verifying on `dev`.
+
+```
+References #N
+```
+
 ## Commands
 
 Several slash-command skills are available for common operations — prefer these over raw shell commands:

@@ -8,5 +8,10 @@
     "target": "http://localhost:5021",
     "secure": false,
     "changeOrigin": true
+  },
+  "/avatars": {
+    "target": "http://localhost:5021",
+    "secure": false,
+    "changeOrigin": true
   }
 }

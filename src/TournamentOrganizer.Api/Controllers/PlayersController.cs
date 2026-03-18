@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
 using TournamentOrganizer.Api.Services.Interfaces;
@@ -9,8 +11,13 @@ namespace TournamentOrganizer.Api.Controllers;
 public class PlayersController : ControllerBase
 {
     private readonly IPlayerService _playerService;
+    private readonly IWebHostEnvironment _env;
 
-    public PlayersController(IPlayerService playerService) => _playerService = playerService;
+    public PlayersController(IPlayerService playerService, IWebHostEnvironment env)
+    {
+        _playerService = playerService;
+        _env = env;
+    }
 
     [HttpGet]
     public async Task<ActionResult<List<PlayerDto>>> GetAll()
@@ -52,5 +59,80 @@ public class PlayersController : ControllerBase
     {
         var records = await _playerService.GetHeadToHeadAsync(id);
         return records == null ? NotFound() : Ok(records);
+    }
+
+    [HttpGet("{id}/commanderstats")]
+    [AllowAnonymous]
+    public async Task<ActionResult<PlayerCommanderStatsDto>> GetCommanderStats(int id)
+    {
+        var result = await _playerService.GetCommanderStatsAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
+    [HttpPost("{id}/avatar")]
+    [Authorize]
+    public async Task<ActionResult<PlayerDto>> UploadAvatar(int id, IFormFile avatar)
+    {
+        if (!await UserCanManagePlayerAsync(id)) return Forbid();
+        if (avatar == null || avatar.Length == 0) return BadRequest("No file provided.");
+        if (avatar.Length > 2097152) return BadRequest("File exceeds 2 MB limit.");
+
+        var ext = Path.GetExtension(avatar.FileName).ToLowerInvariant();
+        if (!new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp" }.Contains(ext))
+            return BadRequest("Invalid file type.");
+
+        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+        Directory.CreateDirectory(Path.Combine(webRoot, "avatars"));
+        var fileName = $"{id}{ext}";
+        var filePath = Path.Combine(webRoot, "avatars", fileName);
+        using (var stream = new FileStream(filePath, FileMode.Create))
+            await avatar.CopyToAsync(stream);
+
+        var url = $"/avatars/{fileName}";
+        var dto = await _playerService.UpdateAvatarUrlAsync(id, url);
+        return Ok(dto);
+    }
+
+    [HttpDelete("{id}/avatar")]
+    [Authorize]
+    public async Task<ActionResult<PlayerDto>> RemoveAvatar(int id)
+    {
+        if (!await UserCanManagePlayerAsync(id)) return Forbid();
+
+        var player = await _playerService.GetByIdAsync(id);
+        if (player == null) return NotFound();
+
+        if (player.AvatarUrl != null)
+        {
+            var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+            var filePath = Path.Combine(webRoot, player.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
+        }
+
+        var dto = await _playerService.UpdateAvatarUrlAsync(id, null);
+        return Ok(dto);
+    }
+
+    private async Task<bool> UserCanManagePlayerAsync(int playerId)
+    {
+        if (User.HasClaim("role", "Administrator")) return true;
+        if (User.HasClaim("role", "StoreManager"))
+        {
+            var storeId = int.Parse(User.FindFirstValue("storeId") ?? "0");
+            return await _playerService.IsPlayerAtStoreAsync(playerId, storeId);
+        }
+        var playerEmail = User.FindFirstValue(ClaimTypes.Email)
+                       ?? User.FindFirstValue("email");
+        return await _playerService.IsPlayerEmailAsync(playerId, playerEmail);
+    }
+
+    [HttpGet("{id}/ratinghistory")]
+    [AllowAnonymous]
+    public async Task<ActionResult<RatingHistoryDto>> GetRatingHistory(int id)
+    {
+        var result = await _playerService.GetRatingHistoryAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
     }
 }

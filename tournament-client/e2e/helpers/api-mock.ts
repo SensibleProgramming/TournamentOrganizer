@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { CheckInResponseDto, EventDto, EventPlayerDto, LeaderboardEntry, PairingsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -334,6 +334,75 @@ export function makeCheckInResponseDto(overrides: Partial<CheckInResponseDto> = 
   return { eventId: 1, eventName: 'Friday Night Magic', ...overrides };
 }
 
+export function makeCommanderStatDto(overrides: Partial<CommanderStatDto> = {}): CommanderStatDto {
+  return { commanderName: 'Atraxa', gamesPlayed: 5, wins: 3, avgFinish: 1.8, ...overrides };
+}
+
+export async function mockGetCommanderStats(
+  page: Page, playerId: number, response: PlayerCommanderStatsDto
+): Promise<void> {
+  await page.route(`**/api/players/${playerId}/commanderstats`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeCommanderMetaEntryDto(overrides: Partial<CommanderMetaEntryDto> = {}): CommanderMetaEntryDto {
+  return { commanderName: 'Atraxa', timesPlayed: 8, wins: 4, winRate: 50, avgFinish: 2.1, ...overrides };
+}
+
+export function makeCommanderMetaReportDto(overrides: Partial<CommanderMetaReportDto> = {}): CommanderMetaReportDto {
+  return { storeId: 1, period: '30d', topCommanders: [], colorBreakdown: {}, ...overrides };
+}
+
+export async function mockGetCommanderMeta(
+  page: Page, storeId: number, period: string, response: CommanderMetaReportDto
+): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/meta?period=${period}`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+/** Intercept POST /api/players/:id/avatar → returns PlayerDto */
+export async function mockUploadPlayerAvatar(page: Page, playerId: number, response: PlayerDto): Promise<void> {
+  await page.route(`**/api/players/${playerId}/avatar`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+/** Intercept DELETE /api/players/:id/avatar → returns PlayerDto */
+export async function mockRemovePlayerAvatar(page: Page, playerId: number, response: PlayerDto): Promise<void> {
+  await page.route(`**/api/players/${playerId}/avatar`, route => {
+    if (route.request().method() === 'DELETE') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+/** Intercept POST /api/stores/:id/discord/test → 204 */
+export async function mockTestDiscordWebhook(page: Page, storeId: number): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/discord/test`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ status: 204 });
+    } else {
+      route.continue();
+    }
+  });
+}
+
 export function makePairingsDto(overrides: Partial<PairingsDto> = {}): PairingsDto {
   return {
     eventId:      1,
@@ -355,4 +424,123 @@ export function makePairingsDto(overrides: Partial<PairingsDto> = {}): PairingsD
     ],
     ...overrides,
   };
+}
+
+/** Intercept POST /api/events/:id/bulkregister/confirm and return the given result. */
+export async function mockBulkRegisterConfirm(page: Page, eventId: number, response: BulkRegisterResultDto): Promise<void> {
+  await page.route(`**/api/events/${eventId}/bulkregister/confirm`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeBulkRegisterResultDto(overrides: Partial<BulkRegisterResultDto> = {}): BulkRegisterResultDto {
+  return {
+    registered: 0,
+    created: 0,
+    errors: [],
+    ...overrides,
+  };
+}
+
+// ── Event Templates ────────────────────────────────────────────────────────────
+
+export async function mockGetEventTemplates(page: Page, storeId: number, templates: EventTemplateDto[]): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/eventtemplates`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: templates });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export async function mockCreateEventTemplate(page: Page, storeId: number, response: EventTemplateDto): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/eventtemplates`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ status: 201, json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export async function mockDeleteEventTemplate(page: Page, storeId: number, id: number): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/eventtemplates/${id}`, route => {
+    if (route.request().method() === 'DELETE') {
+      route.fulfill({ json: { message: 'Template deleted' } });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeEventTemplateDto(overrides: Partial<EventTemplateDto> = {}): EventTemplateDto {
+  return {
+    id:             1,
+    storeId:        1,
+    name:           'Friday Night Commander',
+    description:    null,
+    format:         'Commander',
+    maxPlayers:     16,
+    numberOfRounds: 4,
+    ...overrides,
+  };
+}
+
+/** Intercept GET https://api.scryfall.com/cards/autocomplete and return the given suggestions. */
+export async function mockScryfallAutocomplete(page: Page, suggestions: string[]): Promise<void> {
+  await page.route('https://api.scryfall.com/cards/autocomplete**', route => {
+    route.fulfill({ json: { object: 'catalog', data: suggestions } });
+  });
+}
+
+export function makeRatingSnapshotDto(overrides: Partial<RatingSnapshotDto> = {}): RatingSnapshotDto {
+  return {
+    date:              '2024-01-01T00:00:00',
+    conservativeScore: 5.0,
+    eventName:         'Test Event',
+    roundNumber:       1,
+    ...overrides,
+  };
+}
+
+/** Intercept GET /api/players/:id/ratinghistory and return the given response. */
+export async function mockGetRatingHistory(page: Page, playerId: number, response: RatingHistoryDto): Promise<void> {
+  await page.route(`**/api/players/${playerId}/ratinghistory`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+/**
+ * Stub all player-profile sub-resource endpoints (wishlist, trades, commander stats, etc.)
+ * with empty arrays so that mat-table data sources receive valid iterables.
+ * Register this AFTER stubUnmatchedApi so it takes priority (Playwright LIFO route order).
+ */
+export async function mockPlayerProfileSubApis(page: Page, playerId: number): Promise<void> {
+  await page.route(`**/api/players/${playerId}/commanderstats`, route =>
+    route.fulfill({ json: { playerId, commanders: [] } }));
+  await page.route(`**/api/players/${playerId}/wishlist/supply`, route =>
+    route.fulfill({ json: [] }));
+  await page.route(`**/api/players/${playerId}/wishlist`, route => {
+    if (route.request().method() === 'GET') route.fulfill({ json: [] });
+    else route.continue();
+  });
+  await page.route(`**/api/players/${playerId}/trades/suggestions`, route =>
+    route.fulfill({ json: [] }));
+  await page.route(`**/api/players/${playerId}/trades/demand`, route =>
+    route.fulfill({ json: [] }));
+  await page.route(`**/api/players/${playerId}/trades`, route => {
+    if (route.request().method() === 'GET') route.fulfill({ json: [] });
+    else route.continue();
+  });
+  await page.route(`**/api/players/${playerId}/ratinghistory`, route =>
+    route.fulfill({ json: { playerId, history: [] } }));
 }

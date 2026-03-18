@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/leaderboard', pathMatch: 'full' },
+  { path: '', loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent) },
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login.component').then(m => m.LoginComponent)
@@ -49,6 +49,11 @@ export const routes: Routes = [
     path: 'stores/:id',
     canActivate: [authGuard],
     loadComponent: () => import('./features/stores/store-detail.component').then(m => m.StoreDetailComponent)
+  },
+  {
+    path: 'stores/:id/meta',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/stores/commander-meta.component').then(m => m.CommanderMetaComponent)
   },
   {
     path: 'auth/callback',

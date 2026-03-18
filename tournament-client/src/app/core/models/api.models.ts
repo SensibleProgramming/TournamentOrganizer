@@ -30,6 +30,7 @@ export interface PlayerDto {
   isRanked: boolean;
   placementGamesLeft: number;
   isActive: boolean;
+  avatarUrl?: string | null;
 }
 
 export interface LeaderboardEntry {
@@ -53,6 +54,7 @@ export interface PlayerProfile {
   isActive: boolean;
   gameHistory: PlayerGameHistory[];
   eventRegistrations: PlayerEventRegistration[];
+  avatarUrl?: string | null;
 }
 
 export interface PlayerGameHistory {
@@ -77,6 +79,30 @@ export interface PlayerEventRegistration {
   decklistUrl: string | null;
   commanders: string | null;
   storeName: string | null;
+}
+
+export interface CommanderStatDto {
+  commanderName: string;
+  gamesPlayed: number;
+  wins: number;
+  avgFinish: number;
+}
+
+export interface PlayerCommanderStatsDto {
+  playerId: number;
+  commanders: CommanderStatDto[];
+}
+
+export interface RatingSnapshotDto {
+  date: string;
+  conservativeScore: number;
+  eventName: string;
+  roundNumber: number;
+}
+
+export interface RatingHistoryDto {
+  playerId: number;
+  history: RatingSnapshotDto[];
 }
 
 // Event DTOs
@@ -233,6 +259,8 @@ export interface StoreDetailDto {
   themeId?: number | null;
   themeCssClass?: string | null;
   logoUrl?: string | null;
+  hasDiscordWebhook?: boolean;
+  sellerPortalUrl?: string | null;
 }
 
 export interface CreateStoreDto {
@@ -243,6 +271,8 @@ export interface UpdateStoreDto {
   storeName: string;
   allowableTradeDifferential: number;
   themeId?: number | null;
+  discordWebhookUrl?: string | null;
+  sellerPortalUrl?: string | null;
 }
 
 // Suggested Trades
@@ -313,6 +343,22 @@ export interface UpdateLicenseDto {
   isActive: boolean;
   availableDate: string;
   expiresDate: string;
+}
+
+// Commander Meta Report
+export interface CommanderMetaEntryDto {
+  commanderName: string;
+  timesPlayed: number;
+  wins: number;
+  winRate: number;
+  avgFinish: number;
+}
+
+export interface CommanderMetaReportDto {
+  storeId: number;
+  period: string;
+  topCommanders: CommanderMetaEntryDto[];
+  colorBreakdown: Record<string, number>;
 }
 
 // LocalStorage / Sync types
@@ -406,3 +452,66 @@ export interface StandingsEntry {
   finishPositions: number[];
   gameResults: string[];
 }
+
+// ── Scryfall ───────────────────────────────────────────────────────────────────
+
+export interface ScryfallCardImageUris {
+  normal: string;
+  large: string;
+}
+
+export interface ScryfallCard {
+  name: string;
+  image_uris?: ScryfallCardImageUris;
+  card_faces?: Array<{ image_uris?: ScryfallCardImageUris }>;
+  prices: {
+    usd: string | null;
+    usd_foil: string | null;
+  };
+  purchase_uris: {
+    tcgplayer?: string;
+    cardkingdom?: string;
+    cardmarket?: string;
+  };
+}
+
+// ── Bulk Register ──────────────────────────────────────────────────────────────
+
+/** Frontend-only: resolved player from local cache */
+export interface BulkRegisterFoundDto  { playerId: number; name: string; email: string; }
+
+/** Frontend-only: preview data built client-side before any API call */
+export interface BulkRegisterPreviewDto {
+  found:             BulkRegisterFoundDto[];
+  notFound:          string[];
+  alreadyRegistered: BulkRegisterFoundDto[];
+}
+
+/** Sent to POST /api/events/{id}/bulkregister/confirm */
+export interface BulkRegisterConfirmItemDto { playerId?: number | null; email: string; name?: string | null; }
+export interface BulkRegisterConfirmDto    { registrations: BulkRegisterConfirmItemDto[]; }
+
+/** Response from POST /api/events/{id}/bulkregister/confirm */
+export interface BulkRegisterResultDto     { registered: number; created: number; errors: { email: string; reason: string }[]; }
+
+// ── Event Templates ────────────────────────────────────────────────────────────
+
+export interface EventTemplateDto {
+  id: number;
+  storeId: number;
+  name: string;
+  description?: string | null;
+  format: string;
+  maxPlayers: number;
+  numberOfRounds: number;
+}
+
+export interface CreateEventTemplateDto {
+  name: string;
+  description?: string | null;
+  format: string;
+  maxPlayers: number;
+  numberOfRounds: number;
+}
+
+

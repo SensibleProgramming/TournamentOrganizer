@@ -12,6 +12,12 @@ public class StoreSettings
 
     public int? ThemeId { get; set; }
 
+    /// <summary>
+    /// Optional URL for the store's own card-selling portal (e.g. their TCGplayer store page).
+    /// Supports {q} placeholder for card name substitution; if absent, ?q=cardName is appended.
+    /// </summary>
+    public string? SellerPortalUrl { get; set; }
+
     public Store Store { get; set; } = null!;
     public Theme? Theme { get; set; }
 }

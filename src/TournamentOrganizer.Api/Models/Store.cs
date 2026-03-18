@@ -11,8 +11,10 @@ public class Store
     public DateTime UpdatedOn { get; set; } = DateTime.UtcNow;
     public string UpdatedBy { get; set; } = "system";
     public string? LogoUrl { get; set; }
+    public string? DiscordWebhookUrl { get; set; }
 
     public License? License { get; set; }
     public StoreSettings? Settings { get; set; }
     public ICollection<StoreEvent> StoreEvents { get; set; } = new List<StoreEvent>();
+    public ICollection<EventTemplate> EventTemplates { get; set; } = new List<EventTemplate>();
 }

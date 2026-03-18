@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { PlayerService } from '../../core/services/player.service';
 import { LeaderboardEntry } from '../../core/models/api.models';
 import { RatingBadgeComponent } from '../../shared/components/rating-badge.component';
 
 @Component({
   selector: 'app-leaderboard',
-  imports: [CommonModule, RouterLink, MatTableModule, MatCardModule, RatingBadgeComponent],
+  imports: [CommonModule, RouterLink, MatTableModule, MatCardModule, MatIconModule, RatingBadgeComponent],
   template: `
     <h2>Global Leaderboard</h2>
     <mat-card>
@@ -25,6 +26,11 @@ import { RatingBadgeComponent } from '../../shared/components/rating-badge.compo
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef>Player</th>
               <td mat-cell *matCellDef="let row">
+                @if (avatarUrl(row)) {
+                  <img [src]="avatarUrl(row)!" class="avatar-thumb" [alt]="row.name" />
+                } @else {
+                  <mat-icon class="avatar-thumb-icon">person</mat-icon>
+                }
                 <a [routerLink]="['/players', row.playerId]">{{ row.name }}</a>
               </td>
             </ng-container>
@@ -49,11 +55,21 @@ import { RatingBadgeComponent } from '../../shared/components/rating-badge.compo
       </mat-card-content>
     </mat-card>
   `,
-  styles: []
+  styles: [`
+    .avatar-thumb      { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 8px; }
+    .avatar-thumb-icon { font-size: 32px; width: 32px; height: 32px; vertical-align: middle; margin-right: 8px; }
+  `]
 })
 export class LeaderboardComponent implements OnInit {
   leaderboard: LeaderboardEntry[] = [];
   readonly columns = ['rank', 'name', 'score', 'mu', 'sigma'];
+  private readonly sessionTs = Date.now();
+
+  avatarUrl(row: LeaderboardEntry): string | null {
+    const url = (row as any).avatarUrl as string | null | undefined;
+    if (!url) return null;
+    return url.includes('?t=') ? url : `${url}?t=${this.sessionTs}`;
+  }
 
   constructor(private playerService: PlayerService, private cdr: ChangeDetectorRef) {}
 

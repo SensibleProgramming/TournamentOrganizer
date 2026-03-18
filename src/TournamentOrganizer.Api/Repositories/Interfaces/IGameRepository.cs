@@ -13,4 +13,6 @@ public interface IGameRepository
     Task<List<GameResult>> GetPlayerResultsAsync(int playerId);
     Task<List<GameResult>> GetPlayerGamesWithOpponentsAsync(int playerId);
     Task<List<int>> GetPreviousOpponentIdsAsync(int eventId, int playerId);
+    Task<List<GameResult>> GetStoreGameResultsAsync(int storeId, DateTime? since);
+    Task<List<GameResult>> GetPlayerGamesForRatingReplayAsync(int playerId);
 }

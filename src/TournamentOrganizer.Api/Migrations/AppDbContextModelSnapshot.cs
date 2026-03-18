@@ -176,6 +176,51 @@ namespace TournamentOrganizer.Api.Migrations
                     b.ToTable("EventRegistrations");
                 });
 
+            modelBuilder.Entity("TournamentOrganizer.Api.Models.EventTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("MaxPlayers")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(16);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("NumberOfRounds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(4);
+
+                    b.Property<int>("StoreId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StoreId");
+
+                    b.ToTable("EventTemplates");
+                });
+
             modelBuilder.Entity("TournamentOrganizer.Api.Models.Game", b =>
                 {
                     b.Property<int>("Id")
@@ -297,6 +342,9 @@ namespace TournamentOrganizer.Api.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -427,6 +475,9 @@ namespace TournamentOrganizer.Api.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DiscordWebhookUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -503,6 +554,9 @@ namespace TournamentOrganizer.Api.Migrations
 
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("SellerPortalUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("StoreId")
                         .HasColumnType("int");
@@ -703,6 +757,17 @@ namespace TournamentOrganizer.Api.Migrations
                     b.Navigation("Player");
                 });
 
+            modelBuilder.Entity("TournamentOrganizer.Api.Models.EventTemplate", b =>
+                {
+                    b.HasOne("TournamentOrganizer.Api.Models.Store", "Store")
+                        .WithMany("EventTemplates")
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Store");
+                });
+
             modelBuilder.Entity("TournamentOrganizer.Api.Models.Game", b =>
                 {
                     b.HasOne("TournamentOrganizer.Api.Models.Pod", "Pod")
@@ -889,6 +954,8 @@ namespace TournamentOrganizer.Api.Migrations
 
             modelBuilder.Entity("TournamentOrganizer.Api.Models.Store", b =>
                 {
+                    b.Navigation("EventTemplates");
+
                     b.Navigation("Settings");
 
                     b.Navigation("StoreEvents");

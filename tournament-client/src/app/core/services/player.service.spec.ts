@@ -58,12 +58,13 @@ describe('PlayerService', () => {
   // ── loadAllPlayers ─────────────────────────────────────────────────────────
 
   describe('loadAllPlayers', () => {
-    it('emits from cache without calling the API when cache has data', async () => {
+    it('emits cache immediately and always background-refreshes from API', async () => {
+      mockApi.getAllPlayers.mockReturnValue(of([playerStub]));
       mockCtx.players.getAll.mockReturnValue([playerStub]);
 
       service.loadAllPlayers();
 
-      expect(mockApi.getAllPlayers).not.toHaveBeenCalled();
+      expect(mockApi.getAllPlayers).toHaveBeenCalled();
       expect(await firstValueFrom(service.players$)).toEqual([playerStub]);
     });
 

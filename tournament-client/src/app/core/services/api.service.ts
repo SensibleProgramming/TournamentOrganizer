@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  CreatePlayerDto, UpdatePlayerDto, PlayerDto, PlayerProfile, LeaderboardEntry,
+  CreatePlayerDto, UpdatePlayerDto, PlayerDto, PlayerProfile, PlayerCommanderStatsDto, RatingHistoryDto, LeaderboardEntry,
+  CommanderMetaReportDto,
   CreateEventDto, EventDto, RegisterPlayerDto, EventPlayerDto, CheckInResponseDto,
   GameResultSubmit, RoundDto, StandingsEntry, PairingsDto,
   WishlistEntryDto, TradeEntryDto, CreateCardEntryDto, BulkUploadResultDto,
@@ -10,7 +11,9 @@ import {
   StoreDto, StoreDetailDto, CreateStoreDto, UpdateStoreDto,
   SuggestedTradeDto, TradeCardDemandDto, WishlistCardSupplyDto,
   AppUserDto, AssignEmployeeDto,
-  LicenseDto, CreateLicenseDto, UpdateLicenseDto
+  LicenseDto, CreateLicenseDto, UpdateLicenseDto,
+  BulkRegisterConfirmDto, BulkRegisterResultDto,
+  EventTemplateDto, CreateEventTemplateDto,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -32,8 +35,26 @@ export class ApiService {
     return this.http.put<PlayerDto>(`${this.base}/players/${id}`, dto);
   }
 
+  uploadPlayerAvatar(playerId: number, file: File): Observable<PlayerDto> {
+    const form = new FormData();
+    form.append('avatar', file);
+    return this.http.post<PlayerDto>(`${this.base}/players/${playerId}/avatar`, form);
+  }
+
+  removePlayerAvatar(playerId: number): Observable<PlayerDto> {
+    return this.http.delete<PlayerDto>(`${this.base}/players/${playerId}/avatar`);
+  }
+
   getPlayerProfile(id: number): Observable<PlayerProfile> {
     return this.http.get<PlayerProfile>(`${this.base}/players/${id}/profile`);
+  }
+
+  getCommanderStats(playerId: number): Observable<PlayerCommanderStatsDto> {
+    return this.http.get<PlayerCommanderStatsDto>(`${this.base}/players/${playerId}/commanderstats`);
+  }
+
+  getRatingHistory(playerId: number): Observable<RatingHistoryDto> {
+    return this.http.get<RatingHistoryDto>(`${this.base}/players/${playerId}/ratinghistory`);
   }
 
   // Leaderboard
@@ -208,6 +229,10 @@ export class ApiService {
     return this.http.put<StoreDetailDto>(`${this.base}/stores/${id}`, dto);
   }
 
+  testDiscordWebhook(storeId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/stores/${storeId}/discord/test`, {});
+  }
+
   uploadStoreLogo(storeId: number, file: File): Observable<StoreDto> {
     const form = new FormData();
     form.append('logo', file);
@@ -255,5 +280,31 @@ export class ApiService {
 
   updateLicense(storeId: number, licenseId: number, dto: UpdateLicenseDto): Observable<LicenseDto> {
     return this.http.put<LicenseDto>(`${this.base}/stores/${storeId}/license/${licenseId}`, dto);
+  }
+
+  getCommanderMeta(storeId: number, period: string = '30d'): Observable<CommanderMetaReportDto> {
+    return this.http.get<CommanderMetaReportDto>(`${this.base}/stores/${storeId}/meta`, { params: { period } });
+  }
+
+  bulkRegisterConfirm(eventId: number, dto: BulkRegisterConfirmDto): Observable<BulkRegisterResultDto> {
+    return this.http.post<BulkRegisterResultDto>(`${this.base}/events/${eventId}/bulkregister/confirm`, dto);
+  }
+
+  // ── Event Templates ────────────────────────────────────────────────────────
+
+  getEventTemplates(storeId: number): Observable<EventTemplateDto[]> {
+    return this.http.get<EventTemplateDto[]>(`${this.base}/stores/${storeId}/eventtemplates`);
+  }
+
+  createEventTemplate(storeId: number, dto: CreateEventTemplateDto): Observable<EventTemplateDto> {
+    return this.http.post<EventTemplateDto>(`${this.base}/stores/${storeId}/eventtemplates`, dto);
+  }
+
+  updateEventTemplate(storeId: number, id: number, dto: CreateEventTemplateDto): Observable<EventTemplateDto> {
+    return this.http.put<EventTemplateDto>(`${this.base}/stores/${storeId}/eventtemplates/${id}`, dto);
+  }
+
+  deleteEventTemplate(storeId: number, id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/stores/${storeId}/eventtemplates/${id}`);
   }
 }
