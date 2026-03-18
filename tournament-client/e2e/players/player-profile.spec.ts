@@ -4,6 +4,7 @@ import {
   stubUnmatchedApi,
   mockGetPlayerProfile,
   mockGetCommanderStats,
+  mockGetRatingHistory,
   mockUploadPlayerAvatar,
   mockRemovePlayerAvatar,
   mockScryfallAutocomplete,
@@ -11,6 +12,7 @@ import {
   makePlayerProfile,
   makePlayerDto,
   makeCommanderStatDto,
+  makeRatingSnapshotDto,
 } from '../helpers/api-mock';
 
 // ─── Player Profile (/players/:id) ────────────────────────────────────────────
@@ -36,8 +38,7 @@ test.describe('Player Profile — online', () => {
   });
 
   test('History tab IS visible', async ({ page }) => {
-    const tabs = page.getByRole('tab');
-    await expect(tabs.filter({ hasText: 'History' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'History', exact: true })).toBeVisible();
   });
 
   test('Trading tab IS visible', async ({ page }) => {
@@ -66,8 +67,7 @@ test.describe('Player Profile — offline (API 500)', () => {
   });
 
   test('History tab is NOT visible', async ({ page }) => {
-    const tabs = page.getByRole('tab');
-    await expect(tabs.filter({ hasText: 'History' })).not.toBeVisible();
+    await expect(page.getByRole('tab', { name: 'History', exact: true })).not.toBeVisible();
   });
 
   test('Trading tab is NOT visible', async ({ page }) => {
@@ -397,5 +397,69 @@ test.describe('Player Profile — card autocomplete: Scryfall unavailable', () =
     await expect(input).toHaveValue('Black Lotus');
     // No crash — no mat-option shown but the input value is intact
     await expect(page.locator('mat-option')).toHaveCount(0);
+  });
+});
+
+// ── Rating History ─────────────────────────────────────────────────────────────
+
+test.describe('Player Profile — Rating History: chart shown', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockPlayerProfileSubApis(page, PLAYER_ID);
+    await mockGetRatingHistory(page, PLAYER_ID, {
+      playerId: PLAYER_ID,
+      history: [
+        makeRatingSnapshotDto({ date: '2024-01-01T00:00:00', conservativeScore: 3.0 }),
+        makeRatingSnapshotDto({ date: '2024-02-01T00:00:00', conservativeScore: 5.5 }),
+        makeRatingSnapshotDto({ date: '2024-03-01T00:00:00', conservativeScore: 7.2 }),
+      ],
+    });
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID }));
+    await page.goto(`/players/${PLAYER_ID}`);
+    await page.getByRole('tab', { name: 'Rating History' }).click();
+  });
+
+  test('rating-history-section is visible', async ({ page }) => {
+    await expect(page.locator('.rating-history-section')).toBeVisible();
+  });
+
+  test('canvas element is present inside the section', async ({ page }) => {
+    await expect(page.locator('.rating-history-section canvas')).toBeVisible();
+  });
+});
+
+test.describe('Player Profile — Rating History: hidden with < 2 points', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockPlayerProfileSubApis(page, PLAYER_ID);
+    await mockGetRatingHistory(page, PLAYER_ID, {
+      playerId: PLAYER_ID,
+      history: [makeRatingSnapshotDto()],
+    });
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID }));
+    await page.goto(`/players/${PLAYER_ID}`);
+    await page.getByRole('tab', { name: 'Rating History' }).click();
+  });
+
+  test('canvas is NOT present with 1 snapshot', async ({ page }) => {
+    await expect(page.locator('.rating-history-section canvas')).not.toBeVisible();
+  });
+});
+
+test.describe('Player Profile — Rating History: hidden when empty', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockPlayerProfileSubApis(page, PLAYER_ID);
+    await mockGetRatingHistory(page, PLAYER_ID, { playerId: PLAYER_ID, history: [] });
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID }));
+    await page.goto(`/players/${PLAYER_ID}`);
+    await page.getByRole('tab', { name: 'Rating History' }).click();
+  });
+
+  test('canvas is NOT present with empty history', async ({ page }) => {
+    await expect(page.locator('.rating-history-section canvas')).not.toBeVisible();
   });
 });

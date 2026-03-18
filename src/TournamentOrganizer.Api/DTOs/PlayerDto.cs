@@ -66,3 +66,7 @@ public record HeadToHeadEntryDto(
     int Losses,
     int Games
 );
+
+public record RatingSnapshotDto(DateTime Date, double ConservativeScore, string EventName, int RoundNumber);
+
+public record RatingHistoryDto(int PlayerId, List<RatingSnapshotDto> History);

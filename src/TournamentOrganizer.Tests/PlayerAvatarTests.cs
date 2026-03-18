@@ -78,6 +78,7 @@ public class PlayerAvatarTests
         public Task<List<GameResult>> GetPlayerGamesWithOpponentsAsync(int playerId) => Task.FromResult(new List<GameResult>());
         public Task<List<int>> GetPreviousOpponentIdsAsync(int eventId, int playerId) => Task.FromResult(new List<int>());
         public Task<List<GameResult>> GetStoreGameResultsAsync(int storeId, DateTime? since) => Task.FromResult(new List<GameResult>());
+        public Task<List<GameResult>> GetPlayerGamesForRatingReplayAsync(int pid) => Task.FromResult(new List<GameResult>());
     }
 
     private static PlayerService BuildService(params Player[] players)

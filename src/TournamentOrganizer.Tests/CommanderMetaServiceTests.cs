@@ -30,6 +30,7 @@ public class CommanderMetaServiceTests
         public Task<List<GameResult>> GetPlayerResultsAsync(int pid)                   => Task.FromResult(new List<GameResult>());
         public Task<List<GameResult>> GetPlayerGamesWithOpponentsAsync(int pid)        => Task.FromResult(new List<GameResult>());
         public Task<List<int>> GetPreviousOpponentIdsAsync(int eid, int pid)           => Task.FromResult(new List<int>());
+        public Task<List<GameResult>> GetPlayerGamesForRatingReplayAsync(int pid)      => Task.FromResult(new List<GameResult>());
     }
 
     private static GameResult MakeResult(string? commanderPlayed, int storeId, int finishPosition) =>

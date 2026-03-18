@@ -54,6 +54,7 @@ public class CommanderStatsTests
         public Task<List<GameResult>> GetPlayerGamesWithOpponentsAsync(int pid)        => Task.FromResult(new List<GameResult>());
         public Task<List<int>> GetPreviousOpponentIdsAsync(int eid, int pid) => Task.FromResult(new List<int>());
         public Task<List<GameResult>> GetStoreGameResultsAsync(int storeId, DateTime? since) => Task.FromResult(new List<GameResult>());
+        public Task<List<GameResult>> GetPlayerGamesForRatingReplayAsync(int pid) => Task.FromResult(new List<GameResult>());
     }
 
     private static PlayerService BuildService(FakePlayerRepository playerRepo, FakeGameRepository gameRepo) =>

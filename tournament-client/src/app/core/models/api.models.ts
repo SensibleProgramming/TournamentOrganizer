@@ -93,6 +93,18 @@ export interface PlayerCommanderStatsDto {
   commanders: CommanderStatDto[];
 }
 
+export interface RatingSnapshotDto {
+  date: string;
+  conservativeScore: number;
+  eventName: string;
+  roundNumber: number;
+}
+
+export interface RatingHistoryDto {
+  playerId: number;
+  history: RatingSnapshotDto[];
+}
+
 // Event DTOs
 export type PointSystem = 'ScoreBased' | 'WinBased' | 'VictoryPoints' | 'PointWager' | 'SocialVoting' | 'FiveOneZero' | 'SeatBased';
 

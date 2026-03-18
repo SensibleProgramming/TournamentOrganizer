@@ -1,4 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartData, ChartOptions } from 'chart.js';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -23,7 +25,7 @@ import { ScryfallService } from '../../core/services/scryfall.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PlayerService } from '../../core/services/player.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto, ScryfallCard } from '../../core/models/api.models';
+import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto } from '../../core/models/api.models';
 import { RatingBadgeComponent } from '../../shared/components/rating-badge.component';
 import { PlacementBadgeComponent } from '../../shared/components/placement-badge.component';
 
@@ -34,7 +36,8 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     MatCardModule, MatTableModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSnackBarModule, MatTooltipModule, MatPaginatorModule,
     MatProgressSpinnerModule, MatAutocompleteModule,
-    RatingBadgeComponent, PlacementBadgeComponent
+    RatingBadgeComponent, PlacementBadgeComponent,
+    BaseChartDirective,
   ],
   template: `
     @if (profile) {
@@ -499,6 +502,27 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
         </mat-tab>
         }
 
+        <!-- Rating History tab -->
+        <mat-tab label="Rating History">
+          <div class="tab-content rating-history-section">
+            @if (ratingHistory.length > 1) {
+              <mat-card>
+                <mat-card-content>
+                  <div class="chart-container">
+                    <canvas baseChart
+                            [data]="ratingChartData"
+                            [options]="ratingChartOptions"
+                            type="line">
+                    </canvas>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            } @else {
+              <p class="empty-state">No rating history yet — play more games to see your chart.</p>
+            }
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     }
   `,
@@ -540,11 +564,21 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     .card-preview-loading { display: flex; justify-content: center; padding: 24px 0; }
     .card-preview-not-found { color: #999; font-size: 13px; font-style: italic; text-align: center; }
     .card-list-area { flex: 1; min-width: 0; }
+    .chart-container { position: relative; height: 200px; }
   `]
 })
 export class PlayerProfileComponent implements OnInit {
   profile: PlayerProfile | null = null;
   commanderStats: CommanderStatDto[] = [];
+  ratingHistory: RatingSnapshotDto[] = [];
+  ratingChartData: ChartData<'line'> = { datasets: [] };
+  ratingChartOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: {
+      label: (ctx) => `Score: ${ctx.parsed.y?.toFixed(2) ?? ''}`
+    }}}
+  };
   wishlist: WishlistEntryDto[] = [];
   wishlistSupply = new Map<string, string[]>();
   tradeList: TradeEntryDto[] = [];
@@ -704,6 +738,7 @@ export class PlayerProfileComponent implements OnInit {
         this.loadSuggestedTrades(id);
         this.loadTradeDemand(id);
         this.loadCommanderStats(id);
+        this.loadRatingHistory(id);
       },
       error: () => {
         this.apiOnline = false;
@@ -722,6 +757,20 @@ export class PlayerProfileComponent implements OnInit {
   private loadCommanderStats(playerId: number) {
     this.apiService.getCommanderStats(playerId).subscribe({
       next: stats => { this.commanderStats = stats.commanders; this.cdr.detectChanges(); },
+      error: () => {}
+    });
+  }
+
+  private loadRatingHistory(playerId: number) {
+    this.apiService.getRatingHistory(playerId).subscribe({
+      next: (data) => {
+        this.ratingHistory = data?.history ?? [];
+        this.ratingChartData = {
+          labels: this.ratingHistory.map(s => new Date(s.date).toLocaleDateString()),
+          datasets: [{ data: this.ratingHistory.map(s => s.conservativeScore), label: 'Rating', fill: false, tension: 0.3 }]
+        };
+        this.cdr.detectChanges();
+      },
       error: () => {}
     });
   }

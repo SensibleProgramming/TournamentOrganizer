@@ -11,7 +11,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, PlayerDto, CommanderStatDto, ScryfallCard } from '../../core/models/api.models';
+import { PlayerProfile, PlayerDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto, RatingHistoryDto } from '../../core/models/api.models';
 
 describe('PlayerProfileComponent (smoke)', () => {
   const profileStub: PlayerProfile = {
@@ -96,6 +96,7 @@ describe('PlayerProfileComponent — tab visibility by API state', () => {
     getSuggestedTrades: jest.Mock;
     getTradeDemand:     jest.Mock;
     getCommanderStats:  jest.Mock;
+    getRatingHistory:   jest.Mock;
   };
   let mockCtx: { players: { getById: jest.Mock; getAll: jest.Mock } };
   let mockAuth: { currentUser: null };
@@ -116,6 +117,7 @@ describe('PlayerProfileComponent — tab visibility by API state', () => {
       getSuggestedTrades: jest.fn().mockReturnValue(of([])),
       getTradeDemand:     jest.fn().mockReturnValue(of([])),
       getCommanderStats:  jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+      getRatingHistory:   jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
     };
     mockCtx     = { players: { getById: jest.fn().mockReturnValue(cachedPlayer), getAll: jest.fn().mockReturnValue([]) } };
     mockAuth    = { currentUser: null };
@@ -233,6 +235,7 @@ describe('PlayerProfileComponent — Commander Stats', () => {
       getSuggestedTrades: jest.fn().mockReturnValue(of([])),
       getTradeDemand:     jest.fn().mockReturnValue(of([])),
       getCommanderStats:  jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders })),
+      getRatingHistory:   jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
     };
     const mockCtx  = { players: { getById: jest.fn().mockReturnValue(null), getAll: jest.fn().mockReturnValue([]) } };
     const mockAuth = { currentUser: null };
@@ -318,6 +321,7 @@ describe('PlayerProfileComponent — Avatar', () => {
       getSuggestedTrades:   jest.fn().mockReturnValue(of([])),
       getTradeDemand:       jest.fn().mockReturnValue(of([])),
       getCommanderStats:    jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+        getRatingHistory:     jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
       uploadPlayerAvatar:   jest.fn().mockReturnValue(uploadResult ?? of({ id: PLAYER_ID, avatarUrl: '/avatars/1.png' })),
       removePlayerAvatar:   jest.fn().mockReturnValue(of({ id: PLAYER_ID, avatarUrl: null })),
     };
@@ -480,6 +484,7 @@ describe('PlayerProfileComponent — card name autocomplete', () => {
           getSuggestedTrades: jest.fn().mockReturnValue(of([])),
           getTradeDemand: jest.fn().mockReturnValue(of([])),
           getCommanderStats: jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+          getRatingHistory: jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
         }},
         { provide: LocalStorageContext, useValue: { players: { getById: jest.fn(), getAll: jest.fn().mockReturnValue([]) } } },
         { provide: AuthService, useValue: { currentUser: null, isAdmin: false, isStoreManager: false } },
@@ -607,6 +612,7 @@ describe('PlayerProfileComponent — card preview panel', () => {
           getSuggestedTrades: jest.fn().mockReturnValue(of([])),
           getTradeDemand: jest.fn().mockReturnValue(of([])),
           getCommanderStats: jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+          getRatingHistory: jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
         }},
         { provide: LocalStorageContext, useValue: { players: { getById: jest.fn(), getAll: jest.fn().mockReturnValue([]) } } },
         { provide: AuthService, useValue: { currentUser: null, isAdmin: false, isStoreManager: false } },
@@ -710,5 +716,138 @@ describe('PlayerProfileComponent — card preview panel', () => {
 
     expect(comp.selectedCardName).toBe('UnknownCard');
     expect(comp.selectedCard).toBeNull();
+  });
+});
+
+// ── Rating History ────────────────────────────────────────────────────────────
+
+describe('PlayerProfileComponent — Rating History', () => {
+  const PLAYER_ID = 1;
+
+  const profileStub: PlayerProfile = {
+    id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+    mu: 25, sigma: 8.333, conservativeScore: 0,
+    isRanked: true, placementGamesLeft: 0, isActive: true,
+    gameHistory: [], eventRegistrations: [],
+  };
+
+  function makeSnapshot(overrides: Partial<RatingSnapshotDto> = {}): RatingSnapshotDto {
+    return {
+      date: '2024-01-01T00:00:00',
+      conservativeScore: 5.0,
+      eventName: 'Test Event',
+      roundNumber: 1,
+      ...overrides,
+    };
+  }
+
+  let mockPlayerService: { getProfile: jest.Mock; updatePlayer: jest.Mock };
+  let mockApi: {
+    getWishlist:        jest.Mock;
+    getWishlistSupply:  jest.Mock;
+    getTradeList:       jest.Mock;
+    getSuggestedTrades: jest.Mock;
+    getTradeDemand:     jest.Mock;
+    getCommanderStats:  jest.Mock;
+    getRatingHistory:   jest.Mock;
+  };
+  let mockCtx: { players: { getById: jest.Mock; getAll: jest.Mock } };
+  let mockAuth: { currentUser: null };
+  let mockDialog: { open: jest.Mock };
+  let mockSnackBar: { open: jest.Mock };
+
+  async function setup(history: RatingSnapshotDto[]) {
+    mockPlayerService = {
+      getProfile:   jest.fn().mockReturnValue(of(profileStub)),
+      updatePlayer: jest.fn().mockReturnValue(of(profileStub)),
+    };
+    const historyDto: RatingHistoryDto = { playerId: PLAYER_ID, history };
+    mockApi = {
+      getWishlist:        jest.fn().mockReturnValue(of([])),
+      getWishlistSupply:  jest.fn().mockReturnValue(of([])),
+      getTradeList:       jest.fn().mockReturnValue(of([])),
+      getSuggestedTrades: jest.fn().mockReturnValue(of([])),
+      getTradeDemand:     jest.fn().mockReturnValue(of([])),
+      getCommanderStats:  jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+      getRatingHistory:   jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
+      getRatingHistory:   jest.fn().mockReturnValue(of(historyDto)),
+    };
+    const cachedPlayer: PlayerDto = {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: true, placementGamesLeft: 0, isActive: true,
+    };
+    mockCtx     = { players: { getById: jest.fn().mockReturnValue(cachedPlayer), getAll: jest.fn().mockReturnValue([]) } };
+    mockAuth    = { currentUser: null };
+    mockDialog  = { open: jest.fn().mockReturnValue({ afterClosed: () => of(false) }) };
+    mockSnackBar = { open: jest.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [PlayerProfileComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ActivatedRoute,      useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
+        { provide: PlayerService,       useValue: mockPlayerService },
+        { provide: ApiService,          useValue: mockApi },
+        { provide: LocalStorageContext, useValue: mockCtx },
+        { provide: AuthService,         useValue: mockAuth },
+        { provide: MatDialog,           useValue: mockDialog },
+        { provide: MatSnackBar,         useValue: mockSnackBar },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('getRatingHistory is called in ngOnInit', async () => {
+    await setup([makeSnapshot(), makeSnapshot()]);
+    TestBed.createComponent(PlayerProfileComponent).detectChanges();
+    expect(mockApi.getRatingHistory).toHaveBeenCalledWith(PLAYER_ID);
+  });
+
+  it('chart section is rendered when ratingHistory has 2+ entries', async () => {
+    await setup([makeSnapshot(), makeSnapshot(), makeSnapshot()]);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.rating-history-section')).not.toBeNull();
+  });
+
+  it('chart canvas is present when ratingHistory has 2+ entries', async () => {
+    await setup([makeSnapshot(), makeSnapshot()]);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('canvas')).not.toBeNull();
+  });
+
+  it('chart section is hidden when ratingHistory has 1 entry', async () => {
+    await setup([makeSnapshot()]);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.rating-history-section')).toBeNull();
+  });
+
+  it('chart section is hidden when ratingHistory is empty', async () => {
+    await setup([]);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.rating-history-section')).toBeNull();
+  });
+
+  it('ratingChartData is mapped correctly from history snapshots', async () => {
+    const snapshots = [
+      makeSnapshot({ date: '2024-01-01T00:00:00', conservativeScore: 3.5 }),
+      makeSnapshot({ date: '2024-02-01T00:00:00', conservativeScore: 7.2 }),
+    ];
+    await setup(snapshots);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+    const dataset = comp.ratingChartData.datasets[0];
+    expect(dataset.data).toEqual([3.5, 7.2]);
   });
 });

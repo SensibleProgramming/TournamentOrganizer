@@ -123,6 +123,7 @@ public class StoreEventTests
         public Task<List<GameResult>> GetPlayerGamesWithOpponentsAsync(int pid) => throw new NotImplementedException();
         public Task<List<int>> GetPreviousOpponentIdsAsync(int eid, int pid) => throw new NotImplementedException();
         public Task<List<GameResult>> GetStoreGameResultsAsync(int storeId, DateTime? since) => Task.FromResult(new List<GameResult>());
+        public Task<List<GameResult>> GetPlayerGamesForRatingReplayAsync(int pid) => Task.FromResult(new List<GameResult>());
         public Task DeleteResultsAsync(int gameId) => throw new NotImplementedException();
     }
 
