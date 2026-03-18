@@ -74,6 +74,7 @@ builder.Services.AddScoped<IStoreEventRepository, StoreEventRepository>();
 builder.Services.AddScoped<ILicenseRepository, LicenseRepository>();
 builder.Services.AddScoped<IThemeRepository, ThemeRepository>();
 builder.Services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
+builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 
 // Services
 builder.Services.AddScoped<ITrueSkillService, TrueSkillService>();

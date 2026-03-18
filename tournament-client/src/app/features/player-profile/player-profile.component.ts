@@ -1034,7 +1034,7 @@ export class PlayerProfileComponent implements OnInit {
       tournament_winner: 'workspace_premium',
       undefeated_swiss: 'stars',
       veteran: 'shield',
-      centurion: '100',
+      centurion: 'whatshot',
     };
     return icons[key] ?? 'grade';
   }
