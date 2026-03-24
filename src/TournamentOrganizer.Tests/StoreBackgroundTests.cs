@@ -59,6 +59,10 @@ public class StoreBackgroundTests
     {
         public Task<TournamentOrganizer.Api.Models.LicenseTier> GetEffectiveTierAsync(int storeId)
             => Task.FromResult(TournamentOrganizer.Api.Models.LicenseTier.Tier2);
+        public Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId)
+            => Task.FromResult((false, (DateTime?)null));
+        public Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId)
+            => Task.FromResult((false, (DateTime?)null));
     }
 
     // ── Fake IWebHostEnvironment ─────────────────────────────────────────

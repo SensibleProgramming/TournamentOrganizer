@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TournamentOrganizer.Api.Data;
 
@@ -11,9 +12,11 @@ using TournamentOrganizer.Api.Data;
 namespace TournamentOrganizer.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260323182320_AddTrialExpiresDateToLicense")]
+    partial class AddTrialExpiresDateToLicense
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -314,9 +317,6 @@ namespace TournamentOrganizer.Api.Migrations
 
                     b.Property<DateTime>("ExpiresDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("GracePeriodDays")
-                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");

@@ -1,0 +1,22 @@
+{
+  "name": "webhook-listener",
+  "version": "1.0.0",
+  "description": "Local GitHub webhook listener that auto-triggers /implement-next when a board item moves to Ready",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node src/index.ts",
+    "test": "jest --config jest.config.js",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

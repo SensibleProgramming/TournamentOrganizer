@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -28,6 +29,13 @@ import { StoreContextService } from '../../core/services/store-context.service';
 import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
 import { TierUpgradePromptComponent } from '../../shared/components/tier-upgrade-prompt.component';
 import { MatChipsModule } from '@angular/material/chips';
+
+function getUploadErrorMessage(err: HttpErrorResponse, fallback: string): string {
+  if (err.status === 400 && typeof err.error === 'string' && err.error.trim()) {
+    return err.error.trim();
+  }
+  return fallback;
+}
 
 @Component({
   selector: 'app-store-detail',
@@ -78,6 +86,13 @@ import { MatChipsModule } from '@angular/material/chips';
         }
       </div>
 
+      @if (license?.isInTrial && (authService.isStoreManager || authService.isAdmin)) {
+        <div class="trial-banner" data-testid="trial-badge">
+          <mat-icon>science</mat-icon>
+          Trial — {{ trialDaysRemaining }} day{{ trialDaysRemaining === 1 ? '' : 's' }} remaining.
+          Contact your administrator to upgrade.
+        </div>
+      }
       @if (daysUntilExpiry !== null && daysUntilExpiry <= EXPIRY_WARN_DAYS
            && (authService.isStoreManager || authService.isAdmin)) {
         <div class="expiry-banner" [class.expiry-critical]="daysUntilExpiry <= 7">
@@ -88,6 +103,13 @@ import { MatChipsModule } from '@angular/material/chips';
           } @else {
             Your license has expired. Contact your administrator to renew.
           }
+        </div>
+      }
+      @if (isInGracePeriod && (authService.isStoreManager || authService.isAdmin)) {
+        <div class="grace-warning" data-testid="grace-warning">
+          <mat-icon>warning</mat-icon>
+          License expired. Grace period ends {{ gracePeriodEndsDate | date:'mediumDate' }}.
+          Renew now to avoid losing access.
         </div>
       }
 
@@ -264,7 +286,7 @@ import { MatChipsModule } from '@angular/material/chips';
         }
 
         <!-- ── Tab 3: License (StoreManager+) ───────────────── -->
-        @if (authService.isStoreManager) {
+        @if (authService.isStoreManager || authService.isAdmin) {
           <mat-tab label="License">
             <div class="tab-content">
               @if (license) {
@@ -315,12 +337,25 @@ import { MatChipsModule } from '@angular/material/chips';
                       </mat-form-field>
                       @if (authService.isAdmin) {
                         <mat-form-field>
+                          <mat-label>Trial Expires Date</mat-label>
+                          <input matInput [matDatepicker]="trialPicker" [(ngModel)]="editTrialExpiresDate"
+                                 data-testid="trial-expiry-input">
+                          <mat-datepicker-toggle matIconSuffix [for]="trialPicker"></mat-datepicker-toggle>
+                          <mat-datepicker #trialPicker></mat-datepicker>
+                        </mat-form-field>
+                        <mat-form-field>
                           <mat-label>Tier</mat-label>
                           <mat-select [(ngModel)]="editLicenseTier" data-testid="license-tier-select">
                             <mat-option value="Free">Free</mat-option>
                             <mat-option value="Tier1">Tier 1</mat-option>
                             <mat-option value="Tier2">Tier 2</mat-option>
                           </mat-select>
+                        </mat-form-field>
+                        <mat-form-field>
+                          <mat-label>Grace Period (days)</mat-label>
+                          <input matInput type="number" [(ngModel)]="editGracePeriodDays"
+                                 min="0" data-testid="grace-period-input">
+                          <mat-hint>Days after expiry before features are locked (0 = immediate)</mat-hint>
                         </mat-form-field>
                         <mat-slide-toggle [(ngModel)]="editLicenseActive">Active</mat-slide-toggle>
                       }
@@ -557,6 +592,9 @@ import { MatChipsModule } from '@angular/material/chips';
     .background-section { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
     .background-preview { width: 100%; max-width: 480px; height: 120px; object-fit: cover; border-radius: 8px; }
     .expiry-warning { display: flex; align-items: center; gap: 8px; color: #e65100; background: #fff3e0; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.875rem; }
+    .grace-warning { display: flex; align-items: center; gap: 8px; color: #842029; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.875rem; }
+    .trial-banner { display: flex; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: 16px; background: #e8f5e9; border-left: 4px solid #43a047; border-radius: 4px; }
+    .trial-banner mat-icon { color: #2e7d32; }
     .expiry-banner { display: flex; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
     .expiry-banner mat-icon { color: #856404; }
     .expiry-banner.expiry-critical { background: #f8d7da; border-left-color: #dc3545; }
@@ -601,13 +639,34 @@ export class StoreDetailComponent implements OnInit {
   editLicenseKey = '';
   editAvailableDate: Date | null = null;
   editExpiresDate: Date | null = null;
+  editTrialExpiresDate: Date | null = null;
   editLicenseActive = true;
   editLicenseTier: string = 'Tier2';
+  editGracePeriodDays = 0;
 
   get daysUntilExpiry(): number | null {
     if (!this.license?.expiresDate) return null;
     const ms = new Date(this.license.expiresDate).getTime() - Date.now();
     return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  }
+
+  get trialDaysRemaining(): number | null {
+    if (!this.license?.trialExpiresDate) return null;
+    const ms = new Date(this.license.trialExpiresDate).getTime() - Date.now();
+    return Math.ceil(ms / 86400000);
+  }
+
+  get isInGracePeriod(): boolean {
+    if (!this.license?.expiresDate || !this.license.gracePeriodDays) return false;
+    const expired = new Date(this.license.expiresDate).getTime() < Date.now();
+    if (!expired) return false;
+    const graceEnd = new Date(this.license.expiresDate).getTime() + this.license.gracePeriodDays * 86400000;
+    return Date.now() <= graceEnd;
+  }
+
+  get gracePeriodEndsDate(): Date | null {
+    if (!this.license?.expiresDate || !this.license.gracePeriodDays) return null;
+    return new Date(new Date(this.license.expiresDate).getTime() + this.license.gracePeriodDays * 86400000);
   }
 
   // Data Management
@@ -670,8 +729,11 @@ export class StoreDetailComponent implements OnInit {
           this.editLicenseKey = store.license.appKey;
           this.editAvailableDate = new Date(store.license.availableDate);
           this.editExpiresDate = new Date(store.license.expiresDate);
+          this.editTrialExpiresDate = store.license.trialExpiresDate
+            ? new Date(store.license.trialExpiresDate) : null;
           this.editLicenseActive = store.license.isActive;
           this.editLicenseTier = store.license.tier ?? 'Tier2';
+          this.editGracePeriodDays = store.license.gracePeriodDays ?? 0;
         }
         this.cdr.detectChanges();
         // Only load employees and templates after confirming the API is reachable.
@@ -918,11 +980,13 @@ export class StoreDetailComponent implements OnInit {
   saveLicense() {
     if (!this.license || !this.editAvailableDate || !this.editExpiresDate) return;
     this.apiService.updateLicense(this.storeId, this.license.id, {
-      appKey:        this.editLicenseKey.trim(),
-      isActive:      this.editLicenseActive,
-      availableDate: this.editAvailableDate.toISOString(),
-      expiresDate:   this.editExpiresDate.toISOString(),
-      tier:          this.editLicenseTier as any
+      appKey:           this.editLicenseKey.trim(),
+      isActive:         this.editLicenseActive,
+      availableDate:    this.editAvailableDate.toISOString(),
+      expiresDate:      this.editExpiresDate.toISOString(),
+      tier:             this.editLicenseTier as any,
+      trialExpiresDate: this.editTrialExpiresDate?.toISOString() ?? null,
+      gracePeriodDays:  this.editGracePeriodDays,
     }).subscribe({
       next: updated => {
         this.license = updated;
@@ -1016,8 +1080,9 @@ export class StoreDetailComponent implements OnInit {
         this.storeContext.storesChanged$.next();
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.snackBar.open('Logo upload failed', 'Close', { duration: 3000 });
+      error: (err: HttpErrorResponse) => {
+        const msg = getUploadErrorMessage(err, 'Logo upload failed');
+        this.snackBar.open(msg, 'Close', { duration: 4000 });
         this.cdr.detectChanges();
       }
     });
@@ -1040,8 +1105,9 @@ export class StoreDetailComponent implements OnInit {
         if (this.store) this.store = { ...this.store, backgroundImageUrl: bgUrl };
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.snackBar.open('Background upload failed', 'Close', { duration: 3000 });
+      error: (err: HttpErrorResponse) => {
+        const msg = getUploadErrorMessage(err, 'Background upload failed');
+        this.snackBar.open(msg, 'Close', { duration: 4000 });
         this.cdr.detectChanges();
       }
     });

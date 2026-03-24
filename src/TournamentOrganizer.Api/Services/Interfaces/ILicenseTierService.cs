@@ -6,7 +6,17 @@ public interface ILicenseTierService
 {
     /// <summary>
     /// Returns Free if no license, or if the license is expired.
-    /// Otherwise returns the license's Tier.
+    /// Trial active → always Tier2 regardless of License.Tier.
     /// </summary>
     Task<LicenseTier> GetEffectiveTierAsync(int storeId);
+
+    /// <summary>
+    /// Returns whether a store is currently in its trial period and when the trial ends.
+    /// </summary>
+    Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId);
+
+    /// <summary>
+    /// Returns whether a store is currently in its grace period and when the grace period ends.
+    /// </summary>
+    Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId);
 }
