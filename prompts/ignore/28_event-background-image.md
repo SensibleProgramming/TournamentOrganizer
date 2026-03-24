@@ -61,7 +61,7 @@ private static EventDto ToEventDto(Event evt, int playerCount,
 
 **`GetAllAsync`** — already includes `.ThenInclude(se => se!.Store)`; pass `evt.StoreEvent?.Store?.BackgroundImageUrl` to mapper.
 
-**`GetByIdAsync`** — after `GetStoreInfoForEventAsync`, also fetch store's background and pass to mapper. Look up via `_storeEventRepo` to get the store entity including `BackgroundImageUrl`.
+**`GetByIdAsync`** — after `GetStoreInfoForEventAsync`, also fetch store's background and pass to mapper. Look up the store via `_storeEventRepo` or a store repo call.
 
 **Pairings builder** (wherever `PairingsDto` is constructed) — resolve:
 ```csharp
@@ -180,8 +180,10 @@ get backgroundUrl(): string | null {
 onBackgroundSelected(e: Event): void {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file || !this.event) return;
+  // Preview immediately
   this.event = { ...this.event, backgroundImageUrl: URL.createObjectURL(file) };
   this.cdr.detectChanges();
+  // Upload
   this.apiService.uploadEventBackground(this.eventId, file).subscribe({
     next: dto => {
       const url = dto.backgroundImageUrl ? `${dto.backgroundImageUrl}?t=${Date.now()}` : null;
