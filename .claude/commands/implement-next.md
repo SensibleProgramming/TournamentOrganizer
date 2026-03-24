@@ -102,6 +102,12 @@ Estimate story points from the prompt file using this guide:
 - 8 — full-stack, 20–50 files, multiple services + E2E
 - 13 — architectural change or very large cross-cutting feature
 
+Update the prompt file header — add or replace the `> **Story Points:**` line immediately after the `> **GitHub Issue:**` line:
+```
+> **Story Points:** <estimated-points> · Model: `<haiku|sonnet|opus>`
+```
+(1–2 pts → haiku, 3–5 pts → sonnet, 8–13 pts → opus)
+
 Run all three project-board updates (Status, Iteration, Story Points):
 ```bash
 gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \

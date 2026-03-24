@@ -1,6 +1,7 @@
 # RLS: Negative Authorization E2E Tests
 
 > **GitHub Issue:** [#35 test: RLS — Negative Authorization E2E Tests](https://github.com/sgrecoswg/TournamentOrganizer/issues/35)
+> **Story Points:** 3 · Model: `sonnet`
 
 ## What
 Playwright E2E tests that assert unauthorized users receive a forbidden/redirect response — not just that authorized users succeed.
