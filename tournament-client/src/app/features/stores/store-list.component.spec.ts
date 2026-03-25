@@ -221,3 +221,63 @@ describe('StoreListComponent — tier badges', () => {
     expect(el.querySelector('.tier-badge')).toBeNull();
   });
 });
+
+// ── Store Groups ───────────────────────────────────────────────────────────────
+
+describe('StoreListComponent — Store Groups', () => {
+  const groupedStore1: StoreDto = { id: 1, storeName: 'Loc 1', isActive: true, storeGroupId: 1, storeGroupName: 'Top Deck Chain' };
+  const groupedStore2: StoreDto = { id: 2, storeName: 'Loc 2', isActive: true, storeGroupId: 1, storeGroupName: 'Top Deck Chain' };
+  const ungroupedStore: StoreDto = { id: 3, storeName: 'Solo Shop', isActive: true };
+
+  function buildModule(isAdmin: boolean, stores: StoreDto[]) {
+    return TestBed.configureTestingModule({
+      imports: [StoreListComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ApiService,         useValue: { getStores: jest.fn().mockReturnValue(of(stores)) } },
+        { provide: AuthService,        useValue: { isAdmin, currentUser: null } },
+        { provide: LocalStorageContext, useValue: { stores: { getAll: jest.fn().mockReturnValue(stores), seed: jest.fn() } } },
+        { provide: MatSnackBar,         useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('Admin: stores with same storeGroupId rendered under a group header', async () => {
+    await buildModule(true, [groupedStore1, groupedStore2]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Top Deck Chain');
+  });
+
+  it('Admin: group name shown in .group-header element', async () => {
+    await buildModule(true, [groupedStore1]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const headers = el.querySelectorAll('.group-header');
+    expect(headers.length).toBeGreaterThan(0);
+    expect(headers[0].textContent).toContain('Top Deck Chain');
+  });
+
+  it('Admin: ungrouped stores listed separately in .ungrouped-section', async () => {
+    await buildModule(true, [groupedStore1, ungroupedStore]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const ungroupedSection = el.querySelector('.ungrouped-section');
+    expect(ungroupedSection).not.toBeNull();
+    expect(ungroupedSection?.textContent).toContain('Solo Shop');
+  });
+
+  it('Player: no group headers rendered', async () => {
+    await buildModule(false, [groupedStore1, groupedStore2]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelectorAll('.group-header').length).toBe(0);
+  });
+});

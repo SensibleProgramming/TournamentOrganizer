@@ -20,7 +20,7 @@ public class StoresService : IStoresService
     public async Task<List<StoreDto>> GetAllAsync()
     {
         var stores = await _storeRepo.GetAllAsync();
-        return stores.Select(s => new StoreDto(s.Id, s.StoreName, s.IsActive, s.LogoUrl, s.Slug, s.Location, s.BackgroundImageUrl, ComputeTier(s.License))).ToList();
+        return stores.Select(s => new StoreDto(s.Id, s.StoreName, s.IsActive, s.LogoUrl, s.Slug, s.Location, s.BackgroundImageUrl, ComputeTier(s.License), s.StoreGroupId, s.StoreGroup?.Name)).ToList();
     }
 
     public async Task<StoreDetailDto?> GetByIdAsync(int id)

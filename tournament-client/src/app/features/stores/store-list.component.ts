@@ -45,49 +45,140 @@ import { LicenseTier, StoreDto } from '../../core/models/api.models';
     }
 
     @if (stores.length > 0) {
-      <mat-card class="table-card">
-        <mat-card-content>
-          <table mat-table [dataSource]="stores" class="full-width">
-            <ng-container matColumnDef="storeName">
-              <th mat-header-cell *matHeaderCellDef>Name</th>
-              <td mat-cell *matCellDef="let row">
-                <a [routerLink]="['/stores', row.id]">{{ row.storeName }}</a>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="isActive">
-              <th mat-header-cell *matHeaderCellDef>Active</th>
-              <td mat-cell *matCellDef="let row">
-                @if (row.isActive) {
-                  <mat-icon color="primary">check_circle</mat-icon>
-                } @else {
-                  <mat-icon>cancel</mat-icon>
-                }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="tier">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let row">
-                @if (authService.isAdmin) {
-                  <mat-chip class="tier-badge"
-                            [color]="tierColor(row.tier)" highlighted>
-                    {{ tierLabel(row.tier) }}
-                  </mat-chip>
-                }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let row">
-                <button mat-icon-button [routerLink]="['/stores', row.id]">
-                  <mat-icon>settings</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="columns"></tr>
-            <tr mat-row *matRowDef="let row; columns: columns;"></tr>
-          </table>
-        </mat-card-content>
-      </mat-card>
+      @if (authService.isAdmin) {
+        @for (group of uniqueGroups; track group.id) {
+          <div class="group-header">
+            <mat-icon>store</mat-icon>
+            <span>{{ group.name }}</span>
+          </div>
+          <mat-card class="table-card">
+            <mat-card-content>
+              <table mat-table [dataSource]="storesByGroup(group.id)" class="full-width">
+                <ng-container matColumnDef="storeName">
+                  <th mat-header-cell *matHeaderCellDef>Name</th>
+                  <td mat-cell *matCellDef="let row">
+                    <a [routerLink]="['/stores', row.id]">{{ row.storeName }}</a>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="isActive">
+                  <th mat-header-cell *matHeaderCellDef>Active</th>
+                  <td mat-cell *matCellDef="let row">
+                    @if (row.isActive) {
+                      <mat-icon color="primary">check_circle</mat-icon>
+                    } @else {
+                      <mat-icon>cancel</mat-icon>
+                    }
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="tier">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let row">
+                    <mat-chip class="tier-badge" [color]="tierColor(row.tier)" highlighted>
+                      {{ tierLabel(row.tier) }}
+                    </mat-chip>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let row">
+                    <button mat-icon-button [routerLink]="['/stores', row.id]">
+                      <mat-icon>settings</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="columns"></tr>
+                <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+              </table>
+            </mat-card-content>
+          </mat-card>
+        }
+        @if (ungroupedStores.length > 0) {
+          <div class="ungrouped-section">
+            <div class="group-header ungrouped-header">
+              <mat-icon>storefront</mat-icon>
+              <span>Ungrouped</span>
+            </div>
+            <mat-card class="table-card">
+              <mat-card-content>
+                <table mat-table [dataSource]="ungroupedStores" class="full-width">
+                  <ng-container matColumnDef="storeName">
+                    <th mat-header-cell *matHeaderCellDef>Name</th>
+                    <td mat-cell *matCellDef="let row">
+                      <a [routerLink]="['/stores', row.id]">{{ row.storeName }}</a>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="isActive">
+                    <th mat-header-cell *matHeaderCellDef>Active</th>
+                    <td mat-cell *matCellDef="let row">
+                      @if (row.isActive) {
+                        <mat-icon color="primary">check_circle</mat-icon>
+                      } @else {
+                        <mat-icon>cancel</mat-icon>
+                      }
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="tier">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let row">
+                      <mat-chip class="tier-badge" [color]="tierColor(row.tier)" highlighted>
+                        {{ tierLabel(row.tier) }}
+                      </mat-chip>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let row">
+                      <button mat-icon-button [routerLink]="['/stores', row.id]">
+                        <mat-icon>settings</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="columns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+                </table>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        }
+      } @else {
+        <mat-card class="table-card">
+          <mat-card-content>
+            <table mat-table [dataSource]="stores" class="full-width">
+              <ng-container matColumnDef="storeName">
+                <th mat-header-cell *matHeaderCellDef>Name</th>
+                <td mat-cell *matCellDef="let row">
+                  <a [routerLink]="['/stores', row.id]">{{ row.storeName }}</a>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="isActive">
+                <th mat-header-cell *matHeaderCellDef>Active</th>
+                <td mat-cell *matCellDef="let row">
+                  @if (row.isActive) {
+                    <mat-icon color="primary">check_circle</mat-icon>
+                  } @else {
+                    <mat-icon>cancel</mat-icon>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="tier">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let row">
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let row">
+                  <button mat-icon-button [routerLink]="['/stores', row.id]">
+                    <mat-icon>settings</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="columns"></tr>
+              <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+            </table>
+          </mat-card-content>
+        </mat-card>
+      }
     } @else {
       <p class="empty-state">No stores yet.</p>
     }
@@ -96,6 +187,8 @@ import { LicenseTier, StoreDto } from '../../core/models/api.models';
     .create-card { margin-bottom: 24px; }
     .table-card { margin-top: 16px; }
     .empty-state { color: #666; font-style: italic; margin-top: 16px; }
+    .group-header { display: flex; align-items: center; gap: 8px; padding: 12px 0 4px; font-weight: 600; font-size: 1rem; }
+    .ungrouped-section { margin-top: 16px; }
   `]
 })
 export class StoreListComponent implements OnInit {
@@ -103,6 +196,24 @@ export class StoreListComponent implements OnInit {
   newStoreName = '';
   apiOnline = true;
   readonly columns = ['storeName', 'isActive', 'tier', 'actions'];
+
+  get uniqueGroups(): { id: number; name: string }[] {
+    const seen = new Map<number, string>();
+    for (const s of this.stores) {
+      if (s.storeGroupId != null && s.storeGroupName && !seen.has(s.storeGroupId)) {
+        seen.set(s.storeGroupId, s.storeGroupName);
+      }
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }
+
+  storesByGroup(groupId: number): StoreDto[] {
+    return this.stores.filter(s => s.storeGroupId === groupId);
+  }
+
+  get ungroupedStores(): StoreDto[] {
+    return this.stores.filter(s => s.storeGroupId == null);
+  }
 
   tierLabel(tier: LicenseTier | null | undefined): string {
     switch (tier) {
