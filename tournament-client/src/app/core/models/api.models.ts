@@ -330,6 +330,7 @@ export interface StorePublicDto {
 
 export interface CreateStoreDto {
   storeName: string;
+  storeGroupId?: number | null;
 }
 
 export interface UpdateStoreDto {

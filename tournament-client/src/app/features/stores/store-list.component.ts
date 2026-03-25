@@ -10,20 +10,30 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatSelectModule } from '@angular/material/select';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { LicenseTier, StoreDto } from '../../core/models/api.models';
+import { LicenseTier, StoreDto, StoreGroupDto } from '../../core/models/api.models';
 
 @Component({
   selector: 'app-store-list',
   imports: [
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatTableModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSnackBarModule, MatChipsModule
+    MatFormFieldModule, MatInputModule, MatSnackBarModule, MatChipsModule,
+    MatSelectModule
   ],
   template: `
     <h2>Stores</h2>
+
+    @if (authService.isAdmin) {
+      <div class="admin-actions">
+        <a mat-stroked-button routerLink="/store-groups">
+          <mat-icon>store</mat-icon> Manage Store Groups
+        </a>
+      </div>
+    }
 
     @if (authService.isAdmin) {
       <mat-card class="create-card">
@@ -36,6 +46,17 @@ import { LicenseTier, StoreDto } from '../../core/models/api.models';
               <mat-label>Store Name</mat-label>
               <input matInput [(ngModel)]="newStoreName" placeholder="e.g. Downtown Game Shop">
             </mat-form-field>
+            @if (storeGroups.length > 0) {
+              <mat-form-field>
+                <mat-label>Store Group (optional)</mat-label>
+                <mat-select [(ngModel)]="newStoreGroupId" data-create-group-select>
+                  <mat-option [value]="null">— None —</mat-option>
+                  @for (group of storeGroups; track group.id) {
+                    <mat-option [value]="group.id">{{ group.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
             <button mat-raised-button color="primary" (click)="createStore()" [disabled]="!newStoreName.trim() || !apiOnline">
               <mat-icon>add</mat-icon> Create
             </button>
@@ -184,6 +205,7 @@ import { LicenseTier, StoreDto } from '../../core/models/api.models';
     }
   `,
   styles: [`
+    .admin-actions { margin-bottom: 16px; }
     .create-card { margin-bottom: 24px; }
     .table-card { margin-top: 16px; }
     .empty-state { color: #666; font-style: italic; margin-top: 16px; }
@@ -193,7 +215,9 @@ import { LicenseTier, StoreDto } from '../../core/models/api.models';
 })
 export class StoreListComponent implements OnInit {
   stores: StoreDto[] = [];
+  storeGroups: StoreGroupDto[] = [];
   newStoreName = '';
+  newStoreGroupId: number | null = null;
   apiOnline = true;
   readonly columns = ['storeName', 'isActive', 'tier', 'actions'];
 
@@ -241,6 +265,12 @@ export class StoreListComponent implements OnInit {
 
   ngOnInit() {
     this.loadStores();
+    if (this.authService.isAdmin) {
+      this.apiService.getStoreGroups().subscribe({
+        next: groups => { this.storeGroups = groups; this.cdr.detectChanges(); },
+        error: () => {}
+      });
+    }
   }
 
   private loadStores() {
@@ -270,11 +300,12 @@ export class StoreListComponent implements OnInit {
 
   createStore() {
     if (!this.newStoreName.trim()) return;
-    this.apiService.createStore({ storeName: this.newStoreName.trim() }).subscribe({
+    this.apiService.createStore({ storeName: this.newStoreName.trim(), storeGroupId: this.newStoreGroupId }).subscribe({
       next: store => {
         this.ctx.stores.seed([...this.ctx.stores.getAll(), store]);
         this.stores = this.ctx.stores.getAll();
         this.newStoreName = '';
+        this.newStoreGroupId = null;
         this.snackBar.open(`Store "${store.storeName}" created!`, 'OK', { duration: 3000 });
         this.cdr.detectChanges();
       },

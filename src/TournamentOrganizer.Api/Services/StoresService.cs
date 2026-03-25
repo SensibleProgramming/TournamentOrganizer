@@ -37,14 +37,14 @@ public class StoresService : IStoresService
     public async Task<StoreDto> CreateAsync(CreateStoreDto dto)
     {
         var slug = await EnsureUniqueSlugAsync(GenerateSlug(dto.StoreName.Trim()));
-        var store = new Store { StoreName = dto.StoreName.Trim(), Slug = slug };
+        var store = new Store { StoreName = dto.StoreName.Trim(), Slug = slug, StoreGroupId = dto.StoreGroupId };
         await _storeRepo.AddAsync(store);
         await _settingsRepo.UpsertAsync(new StoreSettings
         {
             StoreId = store.Id,
             AllowableTradeDifferential = 10m
         });
-        return new StoreDto(store.Id, store.StoreName, store.IsActive, store.LogoUrl, store.Slug, store.Location, store.BackgroundImageUrl);
+        return new StoreDto(store.Id, store.StoreName, store.IsActive, store.LogoUrl, store.Slug, store.Location, store.BackgroundImageUrl, StoreGroupId: store.StoreGroupId);
     }
 
     public async Task<StoreDetailDto?> UpdateAsync(int id, UpdateStoreDto dto)
