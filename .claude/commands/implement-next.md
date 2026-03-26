@@ -6,8 +6,8 @@ If `$ARGUMENTS` contains a GitHub issue number (e.g. `22`), use that issue.
 
 Otherwise, fetch the Ready items from the project board:
 ```bash
-gh project item-list 2 --owner sgrecoswg --format json \
-  | jq -r '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .title'
+gh project item-list 2 --owner SensibleProgramming --format json \
+  --jq '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .content.title'
 ```
 
 - If there is exactly one Ready item, use it automatically and tell the user.
@@ -17,7 +17,7 @@ gh project item-list 2 --owner sgrecoswg --format json \
 
 Fetch full issue details:
 ```
-gh project item-list 2 --owner sgrecoswg --format json
+gh project item-list 2 --owner SensibleProgramming --format json
 ```
 Find the item whose `content.number` matches the chosen issue number. Extract:
 - `ITEM_ID` — the project item `.id`
@@ -51,7 +51,9 @@ Determine the next available prompt file number by listing `prompts/ignore/` and
 `max(existing NN prefixes) + 1`. Name the file `prompts/ignore/NN_<slug>.md` where `<slug>` is
 kebab-case derived from the issue title (strip "feat:", "fix:", etc.).
 
-Write the file, then **show the full contents to the user and ask for approval before continuing**.
+Write the file, then run `/refine-prompt PROMPT_PATH` and apply any clear improvements before showing it to the user.
+
+**Show the full contents to the user and ask for approval before continuing.**
 Wait for explicit confirmation ("looks good", "approved", "go ahead", etc.) or requested edits
 before proceeding. If edits are requested, apply them and show again.
 
@@ -59,7 +61,7 @@ Once approved:
 - Set `PROMPT_PATH` to the new file path.
 - Update the GitHub issue body to append the prompt file reference:
   ```
-  gh issue edit ISSUE_NUMBER --repo sgrecoswg/TournamentOrganizer \
+  gh issue edit ISSUE_NUMBER --repo SensibleProgramming/TournamentOrganizer \
     --body "<original body>
 
   ## Prompt file
@@ -80,7 +82,7 @@ Read the `## Dependencies` section of the prompt file.
 - For each listed issue number `#N`, check whether a PR referencing it has been merged to `dev`:
   ```bash
   gh pr list --base dev --state merged --json number,title,body \
-    | jq -r '.[] | select(.body | test("#N")) | "#\(.number) \(.title)"'
+    --jq '.[] | select(.body | test("#N")) | "#\(.number) \(.title)"'
   ```
   - All dependencies merged → proceed to Step 3.
   - Any dependency NOT yet merged → **stop**. Do not create a branch or mark In Progress.
@@ -168,22 +170,6 @@ gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
 ```
 
 Report the PR URL to the user.
-
-## Step 8 — Record token usage
-
-Ask the user to check the token count shown at the bottom of the Claude Code terminal for this session, then post it as a comment on the issue:
-
-```bash
-gh issue comment ISSUE_NUMBER --repo sgrecoswg/TournamentOrganizer \
-  --body "**Token usage** (session)
-- Input tokens: <user provides>
-- Output tokens: <user provides>
-- Total: <user provides>
-
-Story points: <SP estimated in Step 3>"
-```
-
-This data is collected to benchmark and improve prompt efficiency over time.
 
 ## Rules
 - Never commit directly to `dev` or `main`

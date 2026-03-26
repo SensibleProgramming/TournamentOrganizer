@@ -6,7 +6,7 @@ If `$ARGUMENTS` contains an issue number (e.g. `30`), use it.
 
 Otherwise fetch Ready items from the project board:
 ```bash
-gh project item-list 2 --owner sgrecoswg --format json \
+gh project item-list 2 --owner SensibleProgramming --format json \
   --jq '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .content.title'
 ```
 
@@ -17,7 +17,7 @@ gh project item-list 2 --owner sgrecoswg --format json \
 
 Fetch full project data:
 ```bash
-gh project item-list 2 --owner sgrecoswg --format json
+gh project item-list 2 --owner SensibleProgramming --format json
 ```
 
 Find the item whose `content.number` matches. Extract:
