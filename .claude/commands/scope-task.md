@@ -60,9 +60,9 @@ Map to model:
 ## Step 4 — Update story points on the project board
 
 ```bash
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTF_lAHOBDyNN84BSBgjzg_rcXo \
+  --field-id PVTF_lADOECHdcM4BSqCszhAIG60 \
   --number <estimated-points>
 ```
 

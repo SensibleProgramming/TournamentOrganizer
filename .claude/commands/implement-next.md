@@ -7,7 +7,7 @@ If `$ARGUMENTS` contains a GitHub issue number (e.g. `22`), use that issue.
 Otherwise, fetch the Ready items from the project board:
 ```bash
 gh project item-list 2 --owner SensibleProgramming --format json \
-  --jq '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .content.title'
+  | jq -r '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .title'
 ```
 
 - If there is exactly one Ready item, use it automatically and tell the user.
@@ -112,19 +112,19 @@ Update the prompt file header — add or replace the `> **Story Points:**` line 
 
 Run all three project-board updates (Status, Iteration, Story Points):
 ```bash
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTSSF_lAHOBDyNN84BSBgjzg_rb-U \
+  --field-id PVTSSF_lADOECHdcM4BSqCszhAIG6Q \
   --single-select-option-id 47fc9ee4
 
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTIF_lAHOBDyNN84BSBgjzg_rc44 \
+  --field-id PVTIF_lADOECHdcM4BSqCszhAIG7A \
   --iteration-id <chosen-iteration-id>
 
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTF_lAHOBDyNN84BSBgjzg_rcXo \
+  --field-id PVTF_lADOECHdcM4BSqCszhAIG60 \
   --number <estimated-points>
 ```
 
@@ -163,13 +163,29 @@ The PR body must include `References #ISSUE_NUMBER` so the branch appears in the
 
 After the PR is created, update the project board status to "In Review":
 ```bash
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTSSF_lAHOBDyNN84BSBgjzg_rb-U \
+  --field-id PVTSSF_lADOECHdcM4BSqCszhAIG6Q \
   --single-select-option-id 2d25f841
 ```
 
 Report the PR URL to the user.
+
+## Step 8 — Record token usage
+
+Ask the user to check the token count shown at the bottom of the Claude Code terminal for this session, then post it as a comment on the issue:
+
+```bash
+gh issue comment ISSUE_NUMBER --repo SensibleProgramming/TournamentOrganizer \
+  --body "**Token usage** (session)
+- Input tokens: <user provides>
+- Output tokens: <user provides>
+- Total: <user provides>
+
+Story points: <SP estimated in Step 3>"
+```
+
+This data is collected to benchmark and improve prompt efficiency over time.
 
 ## Rules
 - Never commit directly to `dev` or `main`
