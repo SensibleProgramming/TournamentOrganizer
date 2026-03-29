@@ -29,9 +29,20 @@ Check whether the issue body contains a `## Prompt file` line with a path like `
 
 **If the line exists** → set `PROMPT_PATH` to that path and skip to Step 2b.
 
-**If the line is missing** → go to Step 2a to generate the prompt file first.
+**If the line is missing** → evaluate whether a prompt file is needed (see criteria below).
 
-### Step 2a — Generate the prompt file (no existing file)
+### Step 2a — Decide whether to generate a prompt file
+
+**Skip prompt file generation** (go straight to Step 3) when ALL of the following are true:
+1. The issue body is already actionable — clear location, clear fix, no ambiguous requirements or design decisions
+2. Estimated story points ≤ 2
+3. The task is a fix/chore with no new components, DTOs, or test classes to design (e.g. dependency bumps, config changes, typo fixes)
+
+If skipping: derive `SHORT_NAME` as a kebab-case slug of the issue title (strip "feat:", "fix:", "[Security]", etc.) and proceed to Step 3. Treat the issue body as the spec.
+
+**Otherwise → generate the prompt file:**
+
+### Step 2a (continued) — Generate the prompt file (no existing file)
 
 The issue body is a brief spec. Expand it into a full, implementation-ready prompt file using
 the project's feature template (`prompts/template/feature-template.md`) as the structure guide.
