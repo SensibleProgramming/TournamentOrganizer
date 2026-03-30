@@ -69,8 +69,15 @@ public class StoresController : ControllerBase
             var jwtStoreId = int.TryParse(User.FindFirstValue("storeId"), out var s) ? s : 0;
             if (jwtStoreId != id) return Forbid();
         }
-        var store = await _service.UpdateAsync(id, dto);
-        return store == null ? NotFound() : Ok(store);
+        try
+        {
+            var store = await _service.UpdateAsync(id, dto);
+            return store == null ? NotFound() : Ok(store);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost("{id}/logo")]

@@ -143,6 +143,15 @@ public class DiscordWebhookService : IDiscordWebhookService
 
     private async Task PostEmbedAsync(string webhookUrl, string title, string description, string footerText)
     {
+        // Defense-in-depth: only allow HTTPS requests to discord.com to prevent SSRF
+        if (!Uri.TryCreate(webhookUrl, UriKind.Absolute, out var uri)
+            || !uri.Host.EndsWith("discord.com", StringComparison.OrdinalIgnoreCase)
+            || uri.Scheme != "https")
+        {
+            _logger.LogWarning("Blocked outbound request to non-Discord URL: {Url}", webhookUrl);
+            return;
+        }
+
         var payload = new
         {
             embeds = new[]
