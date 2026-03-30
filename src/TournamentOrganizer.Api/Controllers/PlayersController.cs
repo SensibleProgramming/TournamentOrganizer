@@ -8,6 +8,7 @@ namespace TournamentOrganizer.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class PlayersController : ControllerBase
 {
     private readonly IPlayerService _playerService;
@@ -29,6 +30,7 @@ public class PlayersController : ControllerBase
     }
 
     [HttpPost]
+    [AllowAnonymous]
     public async Task<ActionResult<PlayerDto>> Register(CreatePlayerDto dto)
     {
         try

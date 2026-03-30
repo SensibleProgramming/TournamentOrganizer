@@ -109,15 +109,14 @@ public class PlayerSelfServiceRlsTests(TournamentOrganizerFactory factory)
 
     // ══════════════════════════════════════════════════════════════════════════
     // GET /api/players/{id}/profile
-    // Public read — no auth required; verify endpoint is accessible
+    // Requires authentication to prevent email enumeration (issue #90)
     // ══════════════════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task GetProfile_Unauthenticated_IsAllowed()
+    public async Task GetProfile_Unauthenticated_Returns401()
     {
         var client = factory.CreateClient(); // no JWT
         var response = await client.GetAsync("/api/players/1/profile");
-        // 404 is fine (no seed data) — just not 401/403
-        AssertAllowed(response);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }
