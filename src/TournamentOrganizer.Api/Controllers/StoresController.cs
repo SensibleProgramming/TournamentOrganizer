@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Helpers;
 using TournamentOrganizer.Api.Models;
 using TournamentOrganizer.Api.Services.Interfaces;
 
@@ -99,6 +100,9 @@ public class StoresController : ControllerBase
         if (logo.Length > MaxFileSizeBytes)
             return BadRequest("File exceeds 2 MB limit.");
 
+        if (!await ImageMagicBytesValidator.IsValidImageAsync(logo))
+            return BadRequest("File content does not match an allowed image type.");
+
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         var logosDir = Path.Combine(webRoot, "logos");
         Directory.CreateDirectory(logosDir);
@@ -129,6 +133,9 @@ public class StoresController : ControllerBase
 
         if (background.Length > MaxBackgroundFileSizeBytes)
             return BadRequest("File exceeds 5 MB limit.");
+
+        if (!await ImageMagicBytesValidator.IsValidImageAsync(background))
+            return BadRequest("File content does not match an allowed image type.");
 
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         var bgDir = Path.Combine(webRoot, "backgrounds");

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Helpers;
 using TournamentOrganizer.Api.Repositories.Interfaces;
 using TournamentOrganizer.Api.Services.Interfaces;
 
@@ -345,6 +346,9 @@ public class EventsController : ControllerBase
 
         if (background.Length > MaxBgFileSizeBytes)
             return BadRequest("File exceeds 5 MB limit.");
+
+        if (!await ImageMagicBytesValidator.IsValidImageAsync(background))
+            return BadRequest("File content does not match an allowed image type.");
 
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         var bgDir = Path.Combine(webRoot, "backgrounds");

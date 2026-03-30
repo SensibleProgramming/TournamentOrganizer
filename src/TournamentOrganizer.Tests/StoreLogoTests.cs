@@ -81,7 +81,11 @@ public class StoreLogoTests
 
     private static IFormFile MakeFormFile(string fileName, long sizeBytes, string contentType = "image/png")
     {
+        // PNG magic bytes prefix so magic-byte validation passes for valid test cases.
+        // Invalid test cases (wrong extension, oversized) fail before reaching that check.
+        byte[] pngMagic = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
         var content = new byte[sizeBytes];
+        Array.Copy(pngMagic, content, Math.Min(pngMagic.Length, content.Length));
         var stream = new MemoryStream(content);
         var formFile = new FormFile(stream, 0, sizeBytes, "logo", fileName)
         {
