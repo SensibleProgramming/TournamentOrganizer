@@ -56,7 +56,16 @@ public class StoresService : IStoresService
         store.UpdatedOn = DateTime.UtcNow;
         // null = no change; empty string = clear the webhook URL
         if (dto.DiscordWebhookUrl != null)
+        {
+            if (dto.DiscordWebhookUrl != string.Empty)
+            {
+                if (!Uri.TryCreate(dto.DiscordWebhookUrl, UriKind.Absolute, out var uri)
+                    || !uri.Host.EndsWith("discord.com", StringComparison.OrdinalIgnoreCase)
+                    || uri.Scheme != "https")
+                    throw new ArgumentException("Discord webhook URL must be an https://discord.com webhook.");
+            }
             store.DiscordWebhookUrl = dto.DiscordWebhookUrl == string.Empty ? null : dto.DiscordWebhookUrl;
+        }
         // Generate slug on first update if not already set
         if (store.Slug == null)
             store.Slug = await EnsureUniqueSlugAsync(GenerateSlug(store.StoreName), store.Id);

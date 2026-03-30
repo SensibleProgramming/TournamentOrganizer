@@ -117,4 +117,60 @@ public class StoresServiceTests
         Assert.Null(stores[0].StoreGroupId);
         Assert.Null(result.StoreGroupId);
     }
+
+    // ── SSRF webhook URL validation tests ─────────────────────────────────
+
+    [Theory]
+    [InlineData("http://169.254.169.254/latest/meta-data/")]
+    [InlineData("http://localhost:5021/admin/")]
+    [InlineData("https://evil.com/steal")]
+    [InlineData("http://discord.com/api/webhooks/123/abc")]  // http not https
+    [InlineData("ftp://discord.com/api/webhooks/123/abc")]
+    [InlineData("not-a-url")]
+    public async Task UpdateAsync_WithInvalidDiscordWebhookUrl_ThrowsArgumentException(string badUrl)
+    {
+        var store = new Store { Id = 1, StoreName = "Shop" };
+        var svc = Build([store]);
+        var dto = new UpdateStoreDto("Shop", 10m, DiscordWebhookUrl: badUrl);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => svc.UpdateAsync(1, dto));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithValidDiscordWebhookUrl_Succeeds()
+    {
+        var store = new Store { Id = 1, StoreName = "Shop", Slug = "shop" };
+        var svc = Build([store]);
+        var dto = new UpdateStoreDto("Shop", 10m, DiscordWebhookUrl: "https://discord.com/api/webhooks/123/abc");
+
+        var result = await svc.UpdateAsync(1, dto);
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithNullWebhookUrl_DoesNotChangeWebhook()
+    {
+        var store = new Store { Id = 1, StoreName = "Shop", Slug = "shop", DiscordWebhookUrl = "https://discord.com/api/webhooks/123/abc" };
+        var svc = Build([store]);
+        var dto = new UpdateStoreDto("Shop", 10m, DiscordWebhookUrl: null);
+
+        var result = await svc.UpdateAsync(1, dto);
+
+        // null means "no change" — no exception thrown, update succeeds
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithEmptyWebhookUrl_ClearsWebhook()
+    {
+        var store = new Store { Id = 1, StoreName = "Shop", Slug = "shop", DiscordWebhookUrl = "https://discord.com/api/webhooks/123/abc" };
+        var svc = Build([store]);
+        var dto = new UpdateStoreDto("Shop", 10m, DiscordWebhookUrl: string.Empty);
+
+        var result = await svc.UpdateAsync(1, dto);
+
+        // empty string = clear the webhook — no exception, update succeeds
+        Assert.NotNull(result);
+    }
 }
