@@ -429,4 +429,40 @@ public class AuthorizationPolicyTests(TournamentOrganizerFactory factory)
         var response = await client.GetAsync("/api/auth/me");
         AssertAllowed(response);
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Player endpoints — must require [Authorize] to prevent email enumeration
+    // ══════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task Unauthenticated_GetAllPlayers_Returns401()
+    {
+        var client = factory.CreateClient();
+        var response = await client.GetAsync("/api/players");
+        AssertUnauthorized(response);
+    }
+
+    [Fact]
+    public async Task Unauthenticated_GetPlayerProfile_Returns401()
+    {
+        var client = factory.CreateClient();
+        var response = await client.GetAsync("/api/players/1/profile");
+        AssertUnauthorized(response);
+    }
+
+    [Fact]
+    public async Task Player_GetAllPlayers_IsAllowed()
+    {
+        var client = factory.ClientAs("Player", playerId: 1);
+        var response = await client.GetAsync("/api/players");
+        AssertAllowed(response);
+    }
+
+    [Fact]
+    public async Task Player_GetPlayerProfile_IsAllowed()
+    {
+        var client = factory.ClientAs("Player", playerId: 1);
+        var response = await client.GetAsync("/api/players/1/profile");
+        AssertAllowed(response);
+    }
 }
