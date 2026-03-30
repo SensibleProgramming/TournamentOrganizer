@@ -23,7 +23,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test (unit + FsCheck properties)
-        run: dotnet test --no-build --configuration Release --logger "github;verbosity=detailed" --verbosity normal
+        run: dotnet test --no-build --configuration Release --logger "GitHubActions;verbosity=detailed" --verbosity normal
 
   frontend:
     name: Frontend — Jest
@@ -42,7 +42,7 @@ jobs:
           cache-dependency-path: tournament-client/package-lock.json
 
       - name: Install
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Test
         run: npx jest --config jest.config.js --ci --passWithNoTests

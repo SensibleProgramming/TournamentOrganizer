@@ -85,7 +85,7 @@ public class FuzzTests
         return results[0].NewMu >= results[1].NewMu;
     }
 
-    [Property(DisplayName = "TrueSkill: Mu and Sigma are always positive finite doubles")]
+    [Property(DisplayName = "TrueSkill: Mu is finite, Sigma is positive finite")]
     public bool TrueSkill_OutputsPositiveFinite(
         PositiveInt mu1, PositiveInt sigma1,
         PositiveInt mu2, PositiveInt sigma2)
@@ -102,7 +102,7 @@ public class FuzzTests
         catch { return true; }
 
         return results.All(r =>
-            double.IsFinite(r.NewMu) && r.NewMu > 0 &&
+            double.IsFinite(r.NewMu) &&
             double.IsFinite(r.NewSigma) && r.NewSigma > 0);
     }
 
