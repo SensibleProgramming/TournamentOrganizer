@@ -14,8 +14,13 @@ namespace TournamentOrganizer.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(IAuthService authService) => _authService = authService;
+    public AuthController(IAuthService authService, IConfiguration configuration)
+    {
+        _authService = authService;
+        _configuration = configuration;
+    }
 
     [HttpGet("google-login")]
     public IActionResult GoogleLogin()
@@ -41,7 +46,8 @@ public class AuthController : ControllerBase
         var user = await _authService.FindOrCreateUserAsync(email, name ?? email, googleId);
         var token = await _authService.GenerateJwtAsync(user);
 
-        return Redirect($"http://localhost:4200/auth/callback?token={token}");
+        var frontendBase = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+        return Redirect($"{frontendBase}/auth/callback#token={Uri.EscapeDataString(token)}");
     }
 
     [HttpGet("me")]

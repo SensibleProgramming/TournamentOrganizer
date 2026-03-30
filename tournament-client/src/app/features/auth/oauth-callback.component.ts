@@ -16,8 +16,18 @@ export class OAuthCallbackComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const token = this.route.snapshot.queryParamMap.get('token');
+    // Token is delivered via URL fragment (#token=...) so it is never sent
+    // to the server or recorded in access logs (OWASP A02:2021).
+    const hash = this.readLocationHash();
+    const hashParams = new URLSearchParams(hash.slice(1));
+    const token = hashParams.get('token');
     const error = this.route.snapshot.queryParamMap.get('error');
+
+    // Immediately clear the fragment from the address bar so it cannot be
+    // bookmarked, copy-pasted, or leaked via the Referer header.
+    if (hash) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
 
     if (token) {
       this.authService.storeToken(token);
@@ -30,5 +40,11 @@ export class OAuthCallbackComponent implements OnInit {
       console.error('OAuth callback error:', error);
       window.location.href = '/';
     }
+  }
+
+  // Extracted for testability: JSDOM's location setter spy intercepts hash
+  // assignments before they take effect, so tests spy on this method instead.
+  protected readLocationHash(): string {
+    return window.location.hash;
   }
 }
