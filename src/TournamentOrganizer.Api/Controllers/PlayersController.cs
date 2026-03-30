@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Helpers;
 using TournamentOrganizer.Api.Services.Interfaces;
 
 namespace TournamentOrganizer.Api.Controllers;
@@ -87,6 +88,9 @@ public class PlayersController : ControllerBase
         var ext = Path.GetExtension(avatar.FileName).ToLowerInvariant();
         if (!new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp" }.Contains(ext))
             return BadRequest("Invalid file type.");
+
+        if (!await ImageMagicBytesValidator.IsValidImageAsync(avatar))
+            return BadRequest("File content does not match an allowed image type.");
 
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         Directory.CreateDirectory(Path.Combine(webRoot, "avatars"));
