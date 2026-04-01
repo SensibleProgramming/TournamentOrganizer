@@ -95,9 +95,16 @@ Launch all agents simultaneously (one message, multiple Agent tool calls). Inclu
 
 ## Step 7 — Monitor and report
 
-As each agent completes, report:
-- PR URL created
-- Any failures or blockers encountered
+After launching all agents, record each agent's `output_file` path from the launch response.
+
+**Do not wait passively.** Poll output files every ~30 seconds:
+```bash
+tail -20 "<output_file_path>"
+```
+
+As soon as an output file contains a PR URL or clear completion signal, report it to the user immediately — do not wait for the task notification, which may arrive late.
+
+Continue polling all remaining agents until all are done or have failed.
 
 When all agents are done, print a final summary:
 ```
