@@ -465,4 +465,24 @@ public class AuthorizationPolicyTests(TournamentOrganizerFactory factory)
         var response = await client.GetAsync("/api/players/1/profile");
         AssertAllowed(response);
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Store list — must not be accessible to anonymous callers (#114)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task Unauthenticated_GetAllStores_Returns401()
+    {
+        var client = factory.CreateClient();
+        var response = await client.GetAsync("/api/stores");
+        AssertUnauthorized(response);
+    }
+
+    [Fact]
+    public async Task Authenticated_GetAllStores_IsAllowed()
+    {
+        var client = factory.ClientAs("Player", playerId: 1);
+        var response = await client.GetAsync("/api/stores");
+        AssertAllowed(response);
+    }
 }

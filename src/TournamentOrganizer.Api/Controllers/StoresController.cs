@@ -34,6 +34,7 @@ public class StoresController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<ActionResult<List<StoreDto>>> GetAll()
         => Ok(await _service.GetAllAsync());
 
