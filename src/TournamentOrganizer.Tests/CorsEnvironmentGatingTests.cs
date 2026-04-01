@@ -32,6 +32,9 @@ public class CorsEnvironmentGatingTests
                         ["Google:ClientId"]                    = "test-google-client-id",
                         ["Google:ClientSecret"]                = "test-google-client-secret",
                         ["ConnectionStrings:DefaultConnection"] = "Server=unused;Database=unused",
+                        // Override AllowedHosts so the in-process test client is not blocked by
+                        // the host-header filtering middleware (appsettings.Production.json restricts this).
+                        ["AllowedHosts"]                       = "*",
                     };
                     foreach (var kv in extraConfig) merged[kv.Key] = kv.Value;
                     cfg.AddInMemoryCollection(merged);

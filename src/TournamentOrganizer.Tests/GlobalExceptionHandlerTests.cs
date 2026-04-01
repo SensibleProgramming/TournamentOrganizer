@@ -35,6 +35,9 @@ public class GlobalExceptionHandlerTests
                         ["Google:ClientSecret"]                = "test-google-client-secret",
                         ["ConnectionStrings:DefaultConnection"] = "Server=unused;Database=unused",
                         ["Cors:AllowedOrigin"]                 = "https://app.example.com",
+                        // Override AllowedHosts so the in-process test client is not blocked by
+                        // the host-header filtering middleware (appsettings.Production.json restricts this).
+                        ["AllowedHosts"]                       = "*",
                     });
                 });
                 b.ConfigureServices(services =>
