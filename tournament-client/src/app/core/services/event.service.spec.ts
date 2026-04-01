@@ -26,12 +26,14 @@ describe('EventService', () => {
   };
 
   let mockCtx: {
-    events: { getAll: jest.Mock; getById: jest.Mock; add: jest.Mock; update: jest.Mock; seed: jest.Mock };
+    events: { getAll: jest.Mock; getById: jest.Mock; add: jest.Mock; update: jest.Mock; seed: jest.Mock; markClean: jest.Mock };
     players: { getAll: jest.Mock; getById: jest.Mock };
     rounds: { getAll: jest.Mock };
     gameResults: { getAll: jest.Mock; getPending: jest.Mock };
     activeStorePrefix: string;
   };
+
+  let mockStoreContext: { selectedStoreId: number | null };
 
   let mockStorage: { getItem: jest.Mock; setItem: jest.Mock };
 
@@ -67,12 +69,13 @@ describe('EventService', () => {
 
     mockCtx = {
       events: {
-        getAll:  jest.fn().mockReturnValue([]),
-        getById: jest.fn().mockReturnValue(null),
-        add:     jest.fn().mockImplementation(dto => ({ id: -1, ...dto })),
-        update:  jest.fn(),
-        remove:  jest.fn(),
-        seed:    jest.fn(),
+        getAll:     jest.fn().mockReturnValue([]),
+        getById:    jest.fn().mockReturnValue(null),
+        add:        jest.fn().mockImplementation(dto => ({ id: -1, ...dto })),
+        update:     jest.fn(),
+        remove:     jest.fn(),
+        seed:       jest.fn(),
+        markClean:  jest.fn(),
       },
       players: {
         getAll:  jest.fn().mockReturnValue([]),
@@ -88,7 +91,9 @@ describe('EventService', () => {
       setItem: jest.fn(),
     };
 
-    service = new EventService(mockApi as any, mockCtx as any, mockStorage as any);
+    mockStoreContext = { selectedStoreId: null };
+
+    service = new EventService(mockApi as any, mockCtx as any, mockStorage as any, mockStoreContext as any);
   });
 
   // ── Initial state ─────────────────────────────────────────────────────────
@@ -143,12 +148,13 @@ describe('EventService', () => {
   // ── loadEvent (local-first) ───────────────────────────────────────────────
 
   describe('loadEvent', () => {
-    it('emits from local ctx when event is cached', async () => {
+    it('emits from local ctx immediately when event is cached, then also fetches from API', async () => {
       mockCtx.events.getById.mockReturnValue(eventStub);
 
       service.loadEvent(1);
 
-      expect(mockApi.getEvent).not.toHaveBeenCalled();
+      // Service always fetches fresh (to keep checkInToken current) even when cached
+      expect(mockApi.getEvent).toHaveBeenCalledWith(1);
       expect(await firstValueFrom(service.currentEvent$)).toEqual(eventStub);
     });
 

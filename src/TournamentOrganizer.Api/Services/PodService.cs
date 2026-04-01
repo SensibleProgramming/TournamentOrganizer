@@ -9,7 +9,7 @@ public class PodService : IPodService
     {
         // Sort by conservative score descending for snake draft
         var sorted = players.OrderByDescending(p => p.ConservativeScore).ToList();
-        int podCount = Math.Max(1, sorted.Count / 4);
+        int podCount = Math.Max(1, (int)Math.Ceiling(sorted.Count / 4.0));
 
         var pods = Enumerable.Range(0, podCount).Select(_ => new List<Player>()).ToList();
 

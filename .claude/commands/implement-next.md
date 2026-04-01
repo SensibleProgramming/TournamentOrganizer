@@ -29,9 +29,20 @@ Check whether the issue body contains a `## Prompt file` line with a path like `
 
 **If the line exists** → set `PROMPT_PATH` to that path and skip to Step 2b.
 
-**If the line is missing** → go to Step 2a to generate the prompt file first.
+**If the line is missing** → evaluate whether a prompt file is needed (see criteria below).
 
-### Step 2a — Generate the prompt file (no existing file)
+### Step 2a — Decide whether to generate a prompt file
+
+**Skip prompt file generation** (go straight to Step 3) when ALL of the following are true:
+1. The issue body is already actionable — clear location, clear fix, no ambiguous requirements or design decisions
+2. Estimated story points ≤ 2
+3. The task is a fix/chore with no new components, DTOs, or test classes to design (e.g. dependency bumps, config changes, typo fixes)
+
+If skipping: derive `SHORT_NAME` as a kebab-case slug of the issue title (strip "feat:", "fix:", "[Security]", etc.) and proceed to Step 3. Treat the issue body as the spec.
+
+**Otherwise → generate the prompt file:**
+
+### Step 2a (continued) — Generate the prompt file (no existing file)
 
 The issue body is a brief spec. Expand it into a full, implementation-ready prompt file using
 the project's feature template (`prompts/template/feature-template.md`) as the structure guide.
@@ -143,23 +154,46 @@ Follow the requirements in the prompt file exactly. Mandatory order:
 2. Confirm tests are red
 3. Write minimum implementation to make them pass
 4. Confirm tests are green
-5. Run `/build` — fix any errors before continuing
+5. Build — run these commands directly (do NOT use `/build`):
+   ```bash
+   dotnet build src/TournamentOrganizer.Api/
+   cd tournament-client && npx ng build && cd ..
+   ```
+   Fix any errors before continuing. Then immediately proceed to Step 6.
 
-After any frontend component changes:
-- Run `/check-zone` on every modified component
-- Run `/e2e <spec-file>` — all tests must pass before moving on
+After any frontend component changes, perform zone and E2E checks inline (do NOT use `/check-zone` or `/e2e`):
+- **Zone check**: Read each modified `*.component.ts` file and verify every method that assigns to `this.*` calls `this.cdr.detectChanges()` after the mutation. Fix any missing calls.
+- **E2E**: Run from `tournament-client/`:
+  ```bash
+  cd tournament-client && npx playwright test <spec-file> --reporter=list && cd ..
+  ```
+  All tests must pass before continuing.
 
 ## Step 6 — Move prompt file to done
 
+Only run this if a prompt file was used (skip if prompt file was not generated in Step 2a):
 ```bash
 mv prompts/ignore/<filename>.md prompts/done/<filename>.md
 ```
 
 ## Step 7 — Commit and create PR
 
-Commit all changes on the feature branch, then run `/create-pr`.
+Commit all changes on the feature branch, then create the PR with inline commands (do NOT use `/create-pr`):
 
-The PR body must include `References #ISSUE_NUMBER` so the branch appears in the issue's Development section.
+```bash
+# Push branch
+git push -u TournamentOrganizer <branch-name>
+
+# Check for existing PR
+gh pr list --head <branch-name> --base dev --json number,url
+
+# If no existing PR, create one:
+gh pr create --base dev --title "<title>" --body "<body>"
+```
+
+PR body must include:
+- `References #ISSUE_NUMBER`
+- `🤖 Generated with [Claude Code](https://claude.com/claude-code) · Model: \`<model>\`` where `<model>` is from the `> **Story Points:** … · Model: \`…\`` line in the prompt file (or `claude-sonnet-4-6` if no prompt file).
 
 After the PR is created, update the project board status to "In Review":
 ```bash
@@ -171,25 +205,11 @@ gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
 
 Report the PR URL to the user.
 
-## Step 8 — Record token usage
-
-Ask the user to check the token count shown at the bottom of the Claude Code terminal for this session, then post it as a comment on the issue:
-
-```bash
-gh issue comment ISSUE_NUMBER --repo SensibleProgramming/TournamentOrganizer \
-  --body "**Token usage** (session)
-- Input tokens: <user provides>
-- Output tokens: <user provides>
-- Total: <user provides>
-
-Story points: <SP estimated in Step 3>"
-```
-
-This data is collected to benchmark and improve prompt efficiency over time.
-
 ## Rules
 - Never commit directly to `dev` or `main`
 - The remote is named `TournamentOrganizer` (not `origin`)
 - Do not skip any step in the TDD workflow
-- Do not consider the task done until `/build`, all tests, `/check-zone`, and `/e2e` all pass
+- Do not consider the task done until build, all tests, zone check, and E2E all pass
 - Never start implementation before the prompt file is approved (Step 2a) or read (Step 2b)
+- **Never use sub-skills (`/build`, `/check-zone`, `/e2e`, `/create-pr`) inside this command** — always run their bash commands directly so this command never pauses waiting for a sub-skill to return
+- Do not stop until the PR URL has been reported to the user and the project board has been marked In Review

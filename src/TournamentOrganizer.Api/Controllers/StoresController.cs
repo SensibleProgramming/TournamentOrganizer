@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Helpers;
 using TournamentOrganizer.Api.Models;
 using TournamentOrganizer.Api.Services.Interfaces;
 
@@ -33,6 +34,7 @@ public class StoresController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<ActionResult<List<StoreDto>>> GetAll()
         => Ok(await _service.GetAllAsync());
 
@@ -69,8 +71,15 @@ public class StoresController : ControllerBase
             var jwtStoreId = int.TryParse(User.FindFirstValue("storeId"), out var s) ? s : 0;
             if (jwtStoreId != id) return Forbid();
         }
-        var store = await _service.UpdateAsync(id, dto);
-        return store == null ? NotFound() : Ok(store);
+        try
+        {
+            var store = await _service.UpdateAsync(id, dto);
+            return store == null ? NotFound() : Ok(store);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost("{id}/logo")]
@@ -91,6 +100,9 @@ public class StoresController : ControllerBase
 
         if (logo.Length > MaxFileSizeBytes)
             return BadRequest("File exceeds 2 MB limit.");
+
+        if (!await ImageMagicBytesValidator.IsValidImageAsync(logo))
+            return BadRequest("File content does not match an allowed image type.");
 
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         var logosDir = Path.Combine(webRoot, "logos");
@@ -122,6 +134,9 @@ public class StoresController : ControllerBase
 
         if (background.Length > MaxBackgroundFileSizeBytes)
             return BadRequest("File exceeds 5 MB limit.");
+
+        if (!await ImageMagicBytesValidator.IsValidImageAsync(background))
+            return BadRequest("File content does not match an allowed image type.");
 
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         var bgDir = Path.Combine(webRoot, "backgrounds");

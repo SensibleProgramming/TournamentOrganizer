@@ -2,23 +2,27 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Helpers;
 using TournamentOrganizer.Api.Services.Interfaces;
 
 namespace TournamentOrganizer.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class PlayersController : ControllerBase
 {
     private readonly IPlayerService _playerService;
     private readonly IWebHostEnvironment _env;
     private readonly IBadgeService _badgeService;
+    private readonly ILogger<PlayersController> _logger;
 
-    public PlayersController(IPlayerService playerService, IWebHostEnvironment env, IBadgeService badgeService)
+    public PlayersController(IPlayerService playerService, IWebHostEnvironment env, IBadgeService badgeService, ILogger<PlayersController> logger)
     {
         _playerService = playerService;
         _env = env;
         _badgeService = badgeService;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -38,7 +42,8 @@ public class PlayersController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return Conflict(new { error = "Operation not permitted." });
         }
     }
 
@@ -86,6 +91,9 @@ public class PlayersController : ControllerBase
         if (!new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp" }.Contains(ext))
             return BadRequest("Invalid file type.");
 
+        if (!await ImageMagicBytesValidator.IsValidImageAsync(avatar))
+            return BadRequest("File content does not match an allowed image type.");
+
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         Directory.CreateDirectory(Path.Combine(webRoot, "avatars"));
         var fileName = $"{id}{ext}";
@@ -110,7 +118,13 @@ public class PlayersController : ControllerBase
         if (player.AvatarUrl != null)
         {
             var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
-            var filePath = Path.Combine(webRoot, player.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            var avatarsDir = Path.GetFullPath(Path.Combine(webRoot, "avatars"));
+            var filePath = Path.GetFullPath(Path.Combine(webRoot,
+                player.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)));
+
+            if (!filePath.StartsWith(avatarsDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                return BadRequest("Invalid avatar path.");
+
             if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
         }
 

@@ -94,6 +94,7 @@ builder.Services.AddScoped<IThemeRepository, ThemeRepository>();
 builder.Services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
 builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 // Services
 builder.Services.AddScoped<ITrueSkillService, TrueSkillService>();
@@ -148,14 +149,19 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS for future Angular frontend
+// CORS — localhost:4200 is only permitted in Development.
+// In Production the origin is read from Cors:AllowedOrigin (appsettings.Production.json).
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        var origins = builder.Environment.IsDevelopment()
+            ? new[] { "http://localhost:4200" }
+            : new[] { builder.Configuration["Cors:AllowedOrigin"]! };
+        policy.WithOrigins(origins)
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -163,9 +169,23 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/error");
+}
+
+if (app.Environment.IsDevelopment())
+{
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+if (!app.Environment.IsDevelopment())
+    app.UseHsts();
+
+app.UseHttpsRedirection();
 
 app.UseCors();
 
@@ -195,6 +215,29 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(backgroundsPath),
     RequestPath  = "/backgrounds"
+});
+
+// Security response headers — OWASP A05:2021
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    ctx.Response.Headers.Append("X-Frame-Options", "DENY");
+    ctx.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    await next();
+});
+
+// Content-Security-Policy header — defence-in-depth against XSS (OWASP A05:2021)
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers.Append(
+        "Content-Security-Policy",
+        "default-src 'self'; " +
+        "script-src 'self'; " +
+        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; " +
+        "font-src https://fonts.gstatic.com; " +
+        "img-src 'self' data: https://cards.scryfall.io https://api.scryfall.com; " +
+        "connect-src 'self' https://api.scryfall.com;");
+    await next();
 });
 
 app.UseAuthentication();

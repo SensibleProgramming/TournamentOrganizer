@@ -211,7 +211,12 @@ public class EventBackgroundTests
 
     private static IFormFile MakeFormFile(string fileName, long sizeBytes, string contentType = "image/png")
     {
-        var stream = new MemoryStream(new byte[sizeBytes]);
+        // PNG magic bytes prefix so magic-byte validation passes for valid test cases.
+        // Invalid test cases (wrong extension, oversized) fail before reaching that check.
+        byte[] pngMagic = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        var content = new byte[sizeBytes];
+        Array.Copy(pngMagic, content, Math.Min(pngMagic.Length, content.Length));
+        var stream = new MemoryStream(content);
         return new FormFile(stream, 0, sizeBytes, "background", fileName)
         {
             Headers = new HeaderDictionary(),
@@ -225,7 +230,7 @@ public class EventBackgroundTests
         bool isAdmin = false,
         int jwtStoreId = 1)
     {
-        var controller = new EventsController(service, new FakeStoreEventRepo(jwtStoreId), env);
+        var controller = new EventsController(service, new FakeStoreEventRepo(jwtStoreId), env, Microsoft.Extensions.Logging.Abstractions.NullLogger<EventsController>.Instance);
         var claims = new List<Claim>
         {
             new("sub", "user-1"),

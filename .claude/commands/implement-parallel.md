@@ -88,15 +88,23 @@ Spawn a background agent with `isolation: worktree` and `model: <selected>`:
 > Read the prompt file at `PROMPT_PATH` and follow it exactly.
 > Follow all steps in `/implement-next` starting from Step 3 (branch already determined: `feature/SHORT_NAME`).
 > The remote is `TournamentOrganizer`. Target branch for PRs is `dev`.
+> The model selected for this task is `MODEL_NAME` (e.g. `claude-haiku-4-5-20251001`, `claude-sonnet-4-6`, `claude-opus-4-6`). Include this in the PR body as: `🤖 Generated with [Claude Code](https://claude.com/claude-code) · Model: \`MODEL_NAME\``
 > Do not return until the PR URL is confirmed.
 
 Launch all agents simultaneously (one message, multiple Agent tool calls). Include the selected model for each.
 
 ## Step 7 — Monitor and report
 
-As each agent completes, report:
-- PR URL created
-- Any failures or blockers encountered
+After launching all agents, record each agent's `output_file` path from the launch response.
+
+**Do not wait passively.** Poll output files every ~30 seconds:
+```bash
+tail -20 "<output_file_path>"
+```
+
+As soon as an output file contains a PR URL or clear completion signal, report it to the user immediately — do not wait for the task notification, which may arrive late.
+
+Continue polling all remaining agents until all are done or have failed.
 
 When all agents are done, print a final summary:
 ```

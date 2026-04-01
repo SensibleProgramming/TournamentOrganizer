@@ -523,6 +523,37 @@ namespace TournamentOrganizer.Api.Migrations
                     b.ToTable("PodPlayers");
                 });
 
+            modelBuilder.Entity("TournamentOrganizer.Api.Models.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AppUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("TournamentOrganizer.Api.Models.Round", b =>
                 {
                     b.Property<int>("Id")
@@ -988,6 +1019,17 @@ namespace TournamentOrganizer.Api.Migrations
                     b.Navigation("Player");
 
                     b.Navigation("Pod");
+                });
+
+            modelBuilder.Entity("TournamentOrganizer.Api.Models.RefreshToken", b =>
+                {
+                    b.HasOne("TournamentOrganizer.Api.Models.AppUser", "AppUser")
+                        .WithMany()
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AppUser");
                 });
 
             modelBuilder.Entity("TournamentOrganizer.Api.Models.Round", b =>

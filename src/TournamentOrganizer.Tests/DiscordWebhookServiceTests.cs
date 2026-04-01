@@ -217,6 +217,38 @@ public class DiscordWebhookServiceTests
         Assert.Contains("Alice", body);
     }
 
+    // ── SSRF defence-in-depth tests ───────────────────────────────────────────
+
+    [Theory]
+    [InlineData("http://169.254.169.254/latest/meta-data/")]
+    [InlineData("http://localhost:5021/admin/")]
+    [InlineData("https://evil.com/steal")]
+    [InlineData("http://discord.com/api/webhooks/123/abc")]
+    public async Task PostTestMessageAsync_WithNonDiscordOrHttpUrl_DoesNotPost(string badUrl)
+    {
+        var storeRepo = new FakeStoreRepository { StoreToReturn = new Store { Id = 1, StoreName = "Shop", DiscordWebhookUrl = badUrl } };
+        var handler = new CapturingHandler();
+        var svc = BuildService(storeRepo, new FakeStoreEventRepository(), new FakeEventRepository(), new FakePlayerRepository(), handler);
+
+        await svc.PostTestMessageAsync(1);
+
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task PostTestMessageAsync_WithValidDiscordUrl_Posts()
+    {
+        const string webhookUrl = "https://discord.com/api/webhooks/999/xyz";
+        var storeRepo = new FakeStoreRepository { StoreToReturn = new Store { Id = 1, StoreName = "Shop", DiscordWebhookUrl = webhookUrl } };
+        var handler = new CapturingHandler();
+        var svc = BuildService(storeRepo, new FakeStoreEventRepository(), new FakeEventRepository(), new FakePlayerRepository(), handler);
+
+        await svc.PostTestMessageAsync(1);
+
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal(webhookUrl, handler.LastRequest!.RequestUri!.ToString());
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static Round MakeRound(int roundNumber) => new()
