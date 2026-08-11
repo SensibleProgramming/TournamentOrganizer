@@ -2,6 +2,12 @@
 .claude/*
 !.claude/commands/
 !.claude/commands/**
+!.claude/skills/
+!.claude/skills/**
+!.claude/agents/
+!.claude/agents/**
+!.claude/scripts/
+!.claude/scripts/**
 
 # .NET build output
 bin/
