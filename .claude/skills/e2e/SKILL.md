@@ -21,7 +21,8 @@ The .NET API does **not** need to be running — all API calls in E2E tests are 
 2. The agent runs `.claude/scripts/run-e2e.ps1 [-Spec <pattern>]` and reports: total counts (passed/failed/skipped), and for each **failed** test — test name, file path, the assertion that failed (Expected/Received), and any relevant error/stack hint.
 3. **On failure — diagnose and fix.** The agent:
    - Selector not found / timeout → reads the component template and checks for the expected ARIA role, label, or text; adjusts the spec's selector.
-   - Network/route error → verifies the `page.route()` mock covers the request URL pattern.
+   - Network/route error → verifies the `page.route()` mock covers the request URL pattern, and checks mock-registration order — a mock registered before `stubUnmatchedApi` is silently shadowed (Playwright LIFO route order); run `/check-mock-order` on the spec if this is suspected.
    - TypeScript compile error → fixes the type issue in the spec or helper file.
    - Re-runs the affected spec after any fix to confirm it passes before proceeding.
+   - A bug found in application source that isn't a trivial selector/label mismatch gets reported, not silently fixed — see the agent's own escalation rule.
 4. Do not open the HTML report unless the user explicitly asks (`npm run e2e:report`).
