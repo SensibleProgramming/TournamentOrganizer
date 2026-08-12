@@ -10,6 +10,10 @@ export class AuthService {
   private userSubject = new BehaviorSubject<CurrentUser | null>(null);
   currentUser$ = this.userSubject.asObservable();
 
+  /** True once the constructor's silentRefresh() has settled (success or failure). */
+  private authReadySubject = new BehaviorSubject<boolean>(false);
+  readonly authReady$ = this.authReadySubject.asObservable();
+
   private token: string | null = null; // in-memory only — never written to localStorage
 
   constructor(private http: HttpClient) {
@@ -22,8 +26,8 @@ export class AuthService {
       {},
       { withCredentials: true }
     ).subscribe({
-      next: res => { this.setToken(res.token); },
-      error: () => {} // no active session — remain unauthenticated
+      next: res => { this.setToken(res.token); this.authReadySubject.next(true); },
+      error: () => { this.authReadySubject.next(true); } // no active session — remain unauthenticated
     });
   }
 

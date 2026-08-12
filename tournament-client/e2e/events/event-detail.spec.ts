@@ -4,6 +4,7 @@ import {
   stubUnmatchedApi,
   mockGetEvent,
   mockGetEventPlayers,
+  mockGetEventRounds,
   mockGetEvents,
   mockGetStores,
   mockSetCheckIn,
@@ -17,6 +18,7 @@ import {
   makeEventPlayerDto,
   makeBulkRegisterResultDto,
 } from '../helpers/api-mock';
+import { RoundDto } from '../../src/app/core/models/api.models';
 
 // ─── Event Detail — Check-In ──────────────────────────────────────────────────
 //
@@ -36,8 +38,8 @@ const ALICE_CHECKED = makeEventPlayerDto({ playerId: 1, name: 'Alice', isChecked
 
 test.describe('Check-In: section visibility', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB]);
@@ -55,8 +57,8 @@ test.describe('Check-In: section visibility', () => {
 
 test.describe('Check-In: section hidden when InProgress', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB]);
@@ -72,8 +74,8 @@ test.describe('Check-In: section hidden when InProgress', () => {
 
 test.describe('Check-In: toggle', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE]);
@@ -100,8 +102,8 @@ test.describe('Check-In: toggle', () => {
 
 test.describe('Check-In: Check In All', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'Registration', playerCount: 3, storeId: STORE_ID }));
     const players = [
@@ -127,8 +129,8 @@ test.describe('Check-In: Check In All', () => {
 
 test.describe('Check-In: Player self-check-in', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1 });
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB]);
@@ -146,8 +148,8 @@ test.describe('Check-In: Player self-check-in', () => {
 
 test.describe('Check-In: role gate (Player viewing another player)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 99 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 99 });
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB]);
@@ -163,8 +165,8 @@ test.describe('Check-In: role gate (Player viewing another player)', () => {
 
 test.describe('Registration: Clear All Players button', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB]);
@@ -190,8 +192,8 @@ test.describe('Registration: Clear All Players button', () => {
 
 test.describe('Registration: Clear All Players — not shown when no players', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'Registration', playerCount: 0, storeId: STORE_ID }));
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -210,8 +212,8 @@ const CAROL_DROPPED = makeEventPlayerDto({ playerId: 3, name: 'Carol', isChecked
 
 test.describe('Player Drop: StoreEmployee can drop an active player during InProgress', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [CAROL]);
@@ -232,8 +234,8 @@ test.describe('Player Drop: StoreEmployee can drop an active player during InPro
 
 test.describe('Player Drop: Un-drop button visible on dropped rows for StoreEmployee', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [CAROL_DROPPED]);
@@ -254,8 +256,8 @@ test.describe('Player Drop: Un-drop button visible on dropped rows for StoreEmpl
 
 test.describe('Player Drop: Withdraw button for Player on own row during InProgress', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: CAROL.playerId });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: CAROL.playerId });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [CAROL]);
@@ -276,8 +278,8 @@ test.describe('Player Drop: Withdraw button for Player on own row during InProgr
 
 test.describe('Player Drop: role gate — no Drop/Withdraw for a different player row', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 99 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 99 });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [CAROL]);
@@ -307,8 +309,8 @@ async function openWaitlistTab(page: import('@playwright/test').Page) {
 
 test.describe('Waitlist: StoreEmployee sees waitlist section with Promote buttons', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, FULL_REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB, EVE_WAITLISTED]);
@@ -334,8 +336,8 @@ test.describe('Waitlist: StoreEmployee sees waitlist section with Promote button
 
 test.describe('Waitlist: Player sees own waitlist position notice', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 5 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 5 });
     await mockGetStores(page, []);
     await mockGetEvent(page, FULL_REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB, EVE_WAITLISTED]);
@@ -355,8 +357,8 @@ test.describe('Waitlist: Player sees own waitlist position notice', () => {
 
 test.describe('Waitlist: no waitlist section when nobody is waitlisted', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB]);
@@ -376,8 +378,8 @@ const ALICE_NO_COMMANDER   = makeEventPlayerDto({ playerId: 1, name: 'Alice', co
 
 test.describe('Commander Declaration: display', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE_WITH_COMMANDER, BOB]);
@@ -391,8 +393,8 @@ test.describe('Commander Declaration: display', () => {
 
 test.describe('Commander Declaration: null display', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE_NO_COMMANDER, BOB]);
@@ -408,8 +410,8 @@ test.describe('Commander Declaration: null display', () => {
 
 test.describe('Commander Declaration: edit (StoreEmployee)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE_NO_COMMANDER, BOB]);
@@ -433,8 +435,8 @@ test.describe('Commander Declaration: edit (StoreEmployee)', () => {
 
 test.describe('Commander Declaration: edit (own player)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1 });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE_NO_COMMANDER, BOB]);
@@ -449,8 +451,8 @@ test.describe('Commander Declaration: edit (own player)', () => {
 
 test.describe('Commander Declaration: role gate', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 99 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 99 });
     await mockGetStores(page, []);
     await mockGetEvent(page, IP_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE_NO_COMMANDER, BOB]);
@@ -480,9 +482,9 @@ async function seedStorePlayers(page: import('@playwright/test').Page, players: 
 
 test.describe('Bulk Register: upload file — visibility', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
-    await stubUnmatchedApi(page);
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -506,9 +508,9 @@ test.describe('Bulk Register: upload file — visibility', () => {
 
 test.describe('Bulk Register: upload file — preview panel', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
-    await stubUnmatchedApi(page);
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -549,9 +551,9 @@ test.describe('Bulk Register: upload file — preview panel', () => {
 
 test.describe('Bulk Register: confirm', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await seedStorePlayers(page, [ALICE_STORE_PLAYER]);
-    await stubUnmatchedApi(page);
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -587,9 +589,9 @@ test.describe('Bulk Register: confirm', () => {
 
 test.describe('Bulk Register: cancel', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await seedStorePlayers(page, [ALICE_STORE_PLAYER]);
-    await stubUnmatchedApi(page);
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -620,9 +622,9 @@ test.describe('Bulk Register: cancel', () => {
 
 test.describe('Bulk Register: multi-select', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
-    await stubUnmatchedApi(page);
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -644,9 +646,9 @@ test.describe('Bulk Register: multi-select', () => {
 
 test.describe('Bulk Register: already registered', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await seedStorePlayers(page, [ALICE_STORE_PLAYER]);
-    await stubUnmatchedApi(page);
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     // Alice is already registered
@@ -677,8 +679,8 @@ test.describe('Bulk Register: already registered', () => {
 
 test.describe('Bulk Register: role gate', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 99 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 99 });
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -702,8 +704,8 @@ test.describe('Bulk Register: capacity guard — over capacity', () => {
   const CAPPED_EVENT = makeEventDto({ id: EVENT_ID, status: 'Registration', playerCount: 2, maxPlayers: 3, storeId: STORE_ID });
 
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, CAPPED_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -746,8 +748,8 @@ test.describe('Bulk Register: capacity guard — within capacity', () => {
   const UNLIMITED_EVENT = makeEventDto({ id: EVENT_ID, status: 'Registration', playerCount: 2, maxPlayers: null, storeId: STORE_ID });
 
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetStores(page, []);
     await mockGetEvent(page, UNLIMITED_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -770,8 +772,8 @@ test.describe('Bulk Register: capacity guard — within capacity', () => {
 
 test.describe('Event Detail — Free tier cap notice', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Free' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Free' });
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
     await mockGetStores(page, []);
@@ -786,8 +788,8 @@ test.describe('Event Detail — Free tier cap notice', () => {
 
 test.describe('Event Detail — Tier1 no cap notice', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
     await mockGetStores(page, []);
@@ -801,8 +803,8 @@ test.describe('Event Detail — Tier1 no cap notice', () => {
 
 test.describe('Event Detail — Player no cap notice', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 99 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 99 });
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
     await mockGetStores(page, []);
@@ -827,8 +829,8 @@ const BG_EVENT_WITH_BG = makeEventDto({
 
 test.describe('Event Detail — background upload', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetEvent(page, BG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
     await mockGetStores(page, []);
@@ -857,8 +859,8 @@ test.describe('Event Detail — background upload', () => {
 
 test.describe('Event Detail — background display', () => {
   test('header has background style when backgroundImageUrl is set', async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetEvent(page, BG_EVENT_WITH_BG);
     await mockGetEventPlayers(page, EVENT_ID, []);
     await mockGetStores(page, []);
@@ -868,8 +870,8 @@ test.describe('Event Detail — background display', () => {
   });
 
   test('header falls back to store background when event has none', async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetEvent(page, makeEventDto({
       id: EVENT_ID, storeBackgroundImageUrl: '/backgrounds/1.png',
     }));
@@ -878,5 +880,56 @@ test.describe('Event Detail — background display', () => {
     await page.goto(`/events/${EVENT_ID}`);
     const header = page.locator('.event-header');
     await expect(header).toHaveCSS('background-image', /url\(.*backgrounds\/1\.png/);
+  });
+});
+
+// ── Status Actions: Pause hidden when all planned rounds are complete ─────────
+
+const COMPLETED_POD = (podId: number): RoundDto['pods'][number] => ({
+  podId, podNumber: 1, finishGroup: null, gameId: 0, players: [], gameStatus: 'Completed', winnerPlayerId: 1,
+});
+const PENDING_POD = (podId: number): RoundDto['pods'][number] => ({
+  podId, podNumber: 1, finishGroup: null, gameId: 0, players: [], gameStatus: 'Pending', winnerPlayerId: null,
+});
+
+test.describe('Status Actions: Pause hidden when all planned rounds are complete', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await mockGetStores(page, []);
+    await mockGetEventPlayers(page, EVENT_ID, [ALICE, BOB]);
+  });
+
+  test('Pause is hidden and End Event remains once the last planned round is complete', async ({ page }) => {
+    await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'InProgress', plannedRounds: 1, playerCount: 2, storeId: STORE_ID }));
+    await mockGetEventRounds(page, EVENT_ID, [{ roundId: 1, roundNumber: 1, pods: [COMPLETED_POD(1)] }]);
+    await page.goto(`/events/${EVENT_ID}`);
+    const statusActions = page.locator('.status-actions');
+    await expect(statusActions.getByRole('button', { name: 'Pause', exact: true })).not.toBeVisible();
+    await expect(statusActions.getByRole('button', { name: /End Event/i })).toBeVisible();
+  });
+
+  test('Pause is visible while rounds remain below the planned count', async ({ page }) => {
+    await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'InProgress', plannedRounds: 2, playerCount: 2, storeId: STORE_ID }));
+    await mockGetEventRounds(page, EVENT_ID, [{ roundId: 1, roundNumber: 1, pods: [COMPLETED_POD(1)] }]);
+    await page.goto(`/events/${EVENT_ID}`);
+    const statusActions = page.locator('.status-actions');
+    await expect(statusActions.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  });
+
+  test('Pause is visible when the last round still has unsubmitted results', async ({ page }) => {
+    await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'InProgress', plannedRounds: 1, playerCount: 2, storeId: STORE_ID }));
+    await mockGetEventRounds(page, EVENT_ID, [{ roundId: 1, roundNumber: 1, pods: [PENDING_POD(1)] }]);
+    await page.goto(`/events/${EVENT_ID}`);
+    const statusActions = page.locator('.status-actions');
+    await expect(statusActions.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  });
+
+  test('Pause is visible for an open-ended event with no plannedRounds cap', async ({ page }) => {
+    await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'InProgress', plannedRounds: null, playerCount: 2, storeId: STORE_ID }));
+    await mockGetEventRounds(page, EVENT_ID, [{ roundId: 1, roundNumber: 1, pods: [COMPLETED_POD(1)] }]);
+    await page.goto(`/events/${EVENT_ID}`);
+    const statusActions = page.locator('.status-actions');
+    await expect(statusActions.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
   });
 });

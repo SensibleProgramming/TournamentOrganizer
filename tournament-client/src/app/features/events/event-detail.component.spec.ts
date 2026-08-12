@@ -698,6 +698,68 @@ describe('EventDetailComponent', () => {
     expect(comp.isRoundComplete(round)).toBe(true);
   });
 
+  // ── allRoundsComplete ───────────────────────────────────────────────────────
+
+  it('allRoundsComplete is true when plannedRounds reached and last round fully submitted', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    fixture.detectChanges();
+    currentEventSubject.next({ ...eventStub, status: 'InProgress', plannedRounds: 1 });
+    const round: RoundDto = { roundId: 1, roundNumber: 1, pods: [
+      { podId: 5, players: [], gameId: 0, gameStatus: 'Completed', winnerPlayerId: 1 },
+    ]};
+    fixture.componentInstance.getPodState(5).submitted = true;
+    roundsSubject.next([round]);
+    expect(fixture.componentInstance.allRoundsComplete()).toBe(true);
+  });
+
+  it('allRoundsComplete is false when rounds remain below plannedRounds', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    fixture.detectChanges();
+    currentEventSubject.next({ ...eventStub, status: 'InProgress', plannedRounds: 2 });
+    const round: RoundDto = { roundId: 1, roundNumber: 1, pods: [
+      { podId: 5, players: [], gameId: 0, gameStatus: 'Completed', winnerPlayerId: 1 },
+    ]};
+    fixture.componentInstance.getPodState(5).submitted = true;
+    roundsSubject.next([round]);
+    expect(fixture.componentInstance.allRoundsComplete()).toBe(false);
+  });
+
+  it('allRoundsComplete is false when last round has unsubmitted pods', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    fixture.detectChanges();
+    currentEventSubject.next({ ...eventStub, status: 'InProgress', plannedRounds: 1 });
+    const round: RoundDto = { roundId: 1, roundNumber: 1, pods: [
+      { podId: 5, players: [], gameId: 0, gameStatus: 'Pending', winnerPlayerId: null },
+    ]};
+    roundsSubject.next([round]);
+    expect(fixture.componentInstance.allRoundsComplete()).toBe(false);
+  });
+
+  it('allRoundsComplete is false when plannedRounds is null regardless of round count', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    fixture.detectChanges();
+    currentEventSubject.next({ ...eventStub, status: 'InProgress', plannedRounds: null });
+    const round: RoundDto = { roundId: 1, roundNumber: 1, pods: [
+      { podId: 5, players: [], gameId: 0, gameStatus: 'Completed', winnerPlayerId: 1 },
+    ]};
+    fixture.componentInstance.getPodState(5).submitted = true;
+    roundsSubject.next([round]);
+    expect(fixture.componentInstance.allRoundsComplete()).toBe(false);
+  });
+
+  it('allRoundsComplete is true when plannedRounds reached and last round has zero pods', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    fixture.detectChanges();
+    currentEventSubject.next({ ...eventStub, status: 'InProgress', plannedRounds: 1 });
+    roundsSubject.next([{ roundId: 1, roundNumber: 1, pods: [] }]);
+    expect(fixture.componentInstance.allRoundsComplete()).toBe(true);
+  });
+
   // ── Check-In ─────────────────────────────────────────────────────────────────
 
   describe('Check-In', () => {

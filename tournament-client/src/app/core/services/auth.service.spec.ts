@@ -111,6 +111,32 @@ describe('AuthService', () => {
     });
   });
 
+  // ─── authReady$ ─────────────────────────────────────────────────────────
+
+  describe('authReady$', () => {
+    it('is false while the initial refresh request is still pending', () => {
+      const service = createService('pending');
+      let latest: boolean | undefined;
+      service.authReady$.subscribe(v => { latest = v; });
+      expect(latest).toBe(false);
+    });
+
+    it('becomes true once the refresh succeeds', () => {
+      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User' });
+      const service = createService(token);
+      let latest: boolean | undefined;
+      service.authReady$.subscribe(v => { latest = v; });
+      expect(latest).toBe(true);
+    });
+
+    it('becomes true once the refresh fails (no active session)', () => {
+      const service = createService('error');
+      let latest: boolean | undefined;
+      service.authReady$.subscribe(v => { latest = v; });
+      expect(latest).toBe(true);
+    });
+  });
+
   // ─── storeToken ─────────────────────────────────────────────────────────
 
   describe('storeToken()', () => {
