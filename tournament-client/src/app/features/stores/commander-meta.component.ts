@@ -93,6 +93,7 @@ export class CommanderMetaComponent implements OnInit {
 
   ngOnInit(): void {
     this.storeId = Number(this.route.snapshot.paramMap.get('id'));
+    this.cdr.detectChanges();
     this.loadMeta();
   }
 
