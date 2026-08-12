@@ -79,6 +79,12 @@ export class App implements OnInit, OnDestroy {
 
     this.userSub = this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      if (user?.storeId) {
+        // Scope LocalStorageContext to the authenticated user's store. The context's
+        // constructor can't do this itself — it's instantiated before silentRefresh()
+        // resolves, so currentUser is still null at construction time.
+        this.ctx.setActiveStore(user.storeId);
+      }
       if (user?.role === 'Administrator' || user?.storeId) {
         const cached = this.ctx.stores.getAll();
         if (cached.length > 0) {

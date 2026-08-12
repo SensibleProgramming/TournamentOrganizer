@@ -85,9 +85,11 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                 }
               }
               @if (event.status === 'InProgress') {
-                <button mat-raised-button color="accent" (click)="updateStatus('Paused')">
-                  <mat-icon>pause</mat-icon> Pause
-                </button>
+                @if (!allRoundsComplete()) {
+                  <button mat-raised-button color="accent" (click)="updateStatus('Paused')">
+                    <mat-icon>pause</mat-icon> Pause
+                  </button>
+                }
                 <button mat-raised-button color="warn" (click)="updateStatus('Completed')">
                   <mat-icon>stop</mat-icon> End Event
                 </button>
@@ -714,6 +716,14 @@ export class EventDetailComponent implements OnInit {
 
   isRoundComplete(round: RoundDto): boolean {
     return round.pods.length > 0 && round.pods.every(pod => this.getPodState(pod.podId).submitted);
+  }
+
+  allRoundsComplete(): boolean {
+    if (!this.event || this.event.plannedRounds == null || this.rounds.length < this.event.plannedRounds) {
+      return false;
+    }
+    const lastRound = this.rounds[this.rounds.length - 1];
+    return lastRound.pods.length === 0 || lastRound.pods.every(pod => this.getPodState(pod.podId).submitted);
   }
 
   startAllTimers(round: RoundDto) {

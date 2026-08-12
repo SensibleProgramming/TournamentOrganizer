@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, NotificationCountDto, NotificationDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto, StoreAnalyticsDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, NotificationCountDto, NotificationDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, RoundDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto, StoreAnalyticsDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -229,6 +229,17 @@ export async function mockGetEvent(page: Page, event: EventDto): Promise<void> {
   await page.route(`**/api/events/${event.id}`, route => {
     if (route.request().method() === 'GET') {
       route.fulfill({ json: event });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+/** Intercept GET /api/events/:id/rounds and return the given list. */
+export async function mockGetEventRounds(page: Page, eventId: number, rounds: RoundDto[]): Promise<void> {
+  await page.route(`**/api/events/${eventId}/rounds`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: rounds });
     } else {
       route.continue();
     }
