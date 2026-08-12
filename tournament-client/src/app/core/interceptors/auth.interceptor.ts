@@ -7,6 +7,14 @@ import { AuthService } from '../services/auth.service';
 import { environment } from '../../../environments/environment';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  // Skip entirely for the refresh/logout endpoints themselves: they don't need a Bearer
+  // token (auth is via HttpOnly cookie), and AuthService.silentRefresh() calls /api/auth/refresh
+  // from inside its own constructor — injecting AuthService here for that request would hit
+  // Angular's circular-DI guard (NG0200) since the service isn't finished constructing yet.
+  if (req.url.includes('/api/auth/refresh') || req.url.includes('/api/auth/logout')) {
+    return next(req);
+  }
+
   const authService = inject(AuthService);
   const router      = inject(Router);
   // Inject HttpClient directly to avoid circular DI (AuthService also injects HttpClient
