@@ -11,8 +11,12 @@ function makeJwt(payload: Record<string, unknown>): string {
 export type Role = 'Administrator' | 'StoreManager' | 'StoreEmployee' | 'Player';
 
 /**
- * Inject a fake auth token into localStorage so the app believes the user
- * is authenticated.  Call this before `page.goto()` via `addInitScript`.
+ * Mock POST /api/auth/refresh to return a fake JWT so AuthService's
+ * silentRefresh() (the app's real session-restore path) picks it up,
+ * the same way it would against a real HttpOnly session cookie.
+ *
+ * ⚠️ Call this AFTER stubUnmatchedApi (LIFO — last registered wins),
+ * so this specific route isn't shadowed by the catch-all.
  */
 export async function loginAs(
   page: Page,
@@ -31,7 +35,7 @@ export async function loginAs(
     ...(opts.licenseTier != null ? { licenseTier: opts.licenseTier } : {}),
   });
 
-  await page.addInitScript((t: string) => {
-    localStorage.setItem('auth_token', t);
-  }, token);
+  await page.route('**/api/auth/refresh', route => {
+    route.fulfill({ json: { token } });
+  });
 }
