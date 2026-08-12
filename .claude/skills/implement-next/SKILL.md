@@ -131,13 +131,25 @@ Determine the current iteration from today's date: Iteration1 = 2026-03-17→202
 
 ## Step 4 — Create the feature branch
 
+Check `git status` first. If the current branch has uncommitted changes that aren't part of this task (e.g. leftover WIP from earlier work), don't let `git checkout dev` clobber or silently drag them along — uncommitted changes are not branch-scoped in git, so a later checkout back to that branch can carry them elsewhere too. Stash them explicitly before switching:
+
+```bash
+git stash push -u -m "WIP <current-branch> before starting <SHORT_NAME>"
+```
+
+Then:
+
 ```bash
 git checkout dev
 git pull TournamentOrganizer dev
 git checkout -b feature/<SHORT_NAME>
 ```
 
+Only restore that stash by returning to the original branch and popping it there once this task's branch work is complete — never pop it while on the new feature branch.
+
 ## Step 5 — Implement the feature (TDD)
+
+For bug-fix issues where the root cause isn't already nailed down by the issue body (e.g. it came from an Explore agent's static read of the code, or your own), verify it by actually reproducing the failure at runtime — browser console/network capture, a debug log, a debugger — before writing the fix. A plausible-sounding explanation from reading source is a hypothesis, not a confirmed root cause; code that looks like it should work can still fail silently (e.g. a swallowed exception, a race condition) for a different reason than it appears to.
 
 Follow the requirements in the prompt file exactly. Mandatory order:
 1. Write failing tests first (backend xUnit and/or frontend Jest + Playwright E2E)

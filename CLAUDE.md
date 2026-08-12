@@ -141,6 +141,7 @@ The Angular dev server proxies `/api/*` to `http://localhost:5021` via `proxy.co
 - **Backend**: xUnit in `src/TournamentOrganizer.Tests/`. Currently covers `TrueSkillCalculator`. Use `dotnet test`.
 - **Frontend unit**: Jest via `jest-preset-angular`. Config in `tournament-client/jest.config.js`. Run with `npm test` from `tournament-client/`.
 - **Frontend E2E**: Playwright in `tournament-client/e2e/`. Config in `tournament-client/playwright.config.ts`. Run with `/e2e` or `npm run e2e` from `tournament-client/`. Tests mock all API routes via `page.route()` — the .NET API does not need to be running.
+- **rtk + Playwright**: the `rtk` hook wrapper's output parser only handles the default `list` reporter. Any other `--reporter` (`json`, custom, etc.) or ad-hoc debug output (e.g. `page.on('console'/'request')` listeners) can silently fail to parse. If you need structured/raw Playwright output, bypass rtk by calling the local binary directly: `node node_modules/@playwright/test/cli.js test <args>` from `tournament-client/`.
 
 ## TDD Workflow (MANDATORY)
 
