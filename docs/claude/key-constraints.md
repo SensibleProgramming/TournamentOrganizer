@@ -1,0 +1,5 @@
+- **Swashbuckle**: Pin to `6.*` — version 10.x is incompatible with .NET 9.
+- **Angular Material theming**: Configure manually in `styles.scss` — `ng add @angular/material` theming fails on v21.
+- **TrueSkill input**: `TrueSkillCalculator.CalculateNewRatings` takes `List<(double Mu, double Sigma)>` and `int[] finishPositions` (1-indexed, where 1 = winner).
+- **Event status flow**: `Registration` → `InProgress` → `Completed` | `Removed`. The `GetAllAsync` service method filters out `Removed` events.
+- **Pod sizes**: Normal pods are 4 players. One pod per round may be 3 or 5 when player count is not divisible by 4.
