@@ -721,6 +721,7 @@ export class StoreDetailComponent implements OnInit {
 
   ngOnInit() {
     this.storeId = Number(this.route.snapshot.paramMap.get('id'));
+    this.cdr.detectChanges();
 
     // Scope the local storage context to this store
     this.ctx.setActiveStore(this.storeId);

@@ -211,6 +211,7 @@ export class EventListComponent implements OnInit, OnDestroy {
       this.loadTemplates();
       this.cdr.detectChanges();
     });
+    this.cdr.detectChanges();
     this.loadTemplates();
   }
 
@@ -245,7 +246,9 @@ export class EventListComponent implements OnInit, OnDestroy {
 
   syncEvent(evt: EventDto, event: MouseEvent) {
     event.stopPropagation();
-    this.syncService.push().then(result => {
+    const syncPromise = this.syncService.push();
+    this.cdr.detectChanges();
+    syncPromise.then(result => {
       if (result.errors > 0) {
         this.snackBar.open('Sync completed with errors', 'OK', { duration: 4000 });
       } else {

@@ -125,6 +125,7 @@ export class GameResultComponent implements OnInit {
   ngOnInit() {
     this.eventId = Number(this.route.snapshot.paramMap.get('eventId'));
     this.gameId = Number(this.route.snapshot.paramMap.get('gameId'));
+    this.cdr.detectChanges();
   }
 
   addPlayer() {
