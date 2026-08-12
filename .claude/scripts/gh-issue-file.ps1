@@ -18,11 +18,18 @@
   reproduction, suggested fix, etc. — the caller composes this content since it
   is finding-specific; this script only handles the mechanical filing part)
 
+.PARAMETER ExtraLabels
+  Additional labels beyond the severity-derived type/priority pair, e.g. @('security')
+  for security-flavored findings (fuzz/security-audit/fuzz-angular). Defaults to
+  @('security') to match those three callers' existing behavior. Pass @() explicitly
+  for non-security findings (e.g. a zone-check or test-flakiness issue).
+
 .OUTPUTS
   Prints "#<N> | <SEVERITY> | <title>" on success.
 
 .EXAMPLE
   ./gh-issue-file.ps1 -Severity HIGH -Prefix "[Fuzz]" -Title "500 on POST /api/players with null email" -BodyFile ./finding-body.md
+  ./gh-issue-file.ps1 -Severity MEDIUM -Prefix "[Zone]" -Title "Missing detectChanges in ngOnInit" -BodyFile ./finding-body.md -ExtraLabels @()
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -36,7 +43,9 @@ param(
     [string]$Title,
 
     [Parameter(Mandatory = $true)]
-    [string]$BodyFile
+    [string]$BodyFile,
+
+    [string[]]$ExtraLabels = @('security')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -60,7 +69,7 @@ $labels = $LabelMap[$Severity]
 $issueTitle = "$Prefix[$Severity] $Title"
 
 $labelArgs = @()
-foreach ($l in @('security') + $labels) { $labelArgs += @('--label', $l) }
+foreach ($l in $ExtraLabels + $labels) { $labelArgs += @('--label', $l) }
 
 $issueUrl = gh issue create --repo $Repo --title $issueTitle --body-file $BodyFile @labelArgs
 if ($LASTEXITCODE -ne 0) { throw "gh issue create failed" }
