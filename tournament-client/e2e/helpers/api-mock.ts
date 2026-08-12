@@ -7,7 +7,7 @@ export async function mockGetEvents(page: Page, events: EventDto[]): Promise<voi
     if (route.request().method() === 'GET') {
       route.fulfill({ json: events });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -18,7 +18,7 @@ export async function mockGetStores(page: Page, stores: StoreDto[]): Promise<voi
     if (route.request().method() === 'GET') {
       route.fulfill({ json: stores });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -29,7 +29,7 @@ export async function mockGetStore(page: Page, store: StoreDetailDto): Promise<v
     if (route.request().method() === 'GET') {
       route.fulfill({ json: store });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -40,7 +40,7 @@ export async function mockGetEmployees(page: Page, storeId: number, employees: u
     if (route.request().method() === 'GET') {
       route.fulfill({ json: employees });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -48,7 +48,7 @@ export async function mockGetEmployees(page: Page, storeId: number, employees: u
 /**
  * Catch-all: fulfill any unmatched /api/* requests with an empty 200.
  *
- * ⚠️  MUST be registered BEFORE specific mocks in each test/beforeEach.
+ * âš ï¸  MUST be registered BEFORE specific mocks in each test/beforeEach.
  * Playwright evaluates routes in LIFO order (last registered = first evaluated),
  * so routes registered after this one will take priority over it.
  */
@@ -56,7 +56,7 @@ export async function stubUnmatchedApi(page: Page): Promise<void> {
   await page.route('**/api/**', route => route.fulfill({ status: 200, json: {} }));
 }
 
-// ── Fixture builders ──────────────────────────────────────────────────────────
+// â”€â”€ Fixture builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function makeEventDto(overrides: Partial<EventDto> = {}): EventDto {
   return {
@@ -78,7 +78,7 @@ export async function mockGetPlayers(page: Page, players: PlayerDto[]): Promise<
     if (route.request().method() === 'GET') {
       route.fulfill({ json: players });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -126,7 +126,7 @@ export async function mockUploadEventBackground(page: Page, eventId: number, res
     if (route.request().method() === 'POST') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -137,7 +137,7 @@ export async function mockUploadStoreLogo(page: Page, storeId: number, response:
     if (route.request().method() === 'POST') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -148,7 +148,7 @@ export async function mockGetThemes(page: Page, themes: ThemeDto[]): Promise<voi
     if (route.request().method() === 'GET') {
       route.fulfill({ json: themes });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -169,7 +169,7 @@ export async function mockGetPlayerProfile(page: Page, profile: PlayerProfile): 
     if (route.request().method() === 'GET') {
       route.fulfill({ json: profile });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -208,7 +208,7 @@ export async function mockGetPlayerBadges(page: Page, playerId: number, badges: 
     if (route.request().method() === 'GET') {
       route.fulfill({ json: badges });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -219,7 +219,7 @@ export async function mockGetLeaderboard(page: Page, entries: LeaderboardEntry[]
     if (route.request().method() === 'GET') {
       route.fulfill({ json: entries });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -230,7 +230,7 @@ export async function mockGetEvent(page: Page, event: EventDto): Promise<void> {
     if (route.request().method() === 'GET') {
       route.fulfill({ json: event });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -241,7 +241,7 @@ export async function mockGetEventRounds(page: Page, eventId: number, rounds: Ro
     if (route.request().method() === 'GET') {
       route.fulfill({ json: rounds });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -252,7 +252,7 @@ export async function mockGetEventPlayers(page: Page, eventId: number, players: 
     if (route.request().method() === 'GET') {
       route.fulfill({ json: players });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -263,7 +263,7 @@ export async function mockSetCheckIn(page: Page, eventId: number, playerId: numb
     if (route.request().method() === 'PUT') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -273,7 +273,7 @@ export async function mockDropPlayer(page: Page, eventId: number, playerId: numb
     if (route.request().method() === 'DELETE') {
       route.fulfill({ status: 204 });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -286,7 +286,7 @@ export async function mockSetPlayerDropped(
     if (route.request().method() === 'PUT') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -326,7 +326,7 @@ export async function mockDeclareCommander(
     if (route.request().method() === 'PUT') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -339,7 +339,7 @@ export async function mockPromoteFromWaitlist(
     if (route.request().method() === 'POST') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -350,12 +350,12 @@ export async function mockGetEventPairings(page: Page, eventId: number, response
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
 
-/** Intercept POST /api/events/checkin/:token — pass a CheckInResponseDto or an HTTP error status. */
+/** Intercept POST /api/events/checkin/:token â€” pass a CheckInResponseDto or an HTTP error status. */
 export async function mockCheckInByToken(
   page: Page,
   token: string,
@@ -369,7 +369,7 @@ export async function mockCheckInByToken(
         route.fulfill({ json: response });
       }
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -389,7 +389,7 @@ export async function mockGetCommanderStats(
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -409,40 +409,40 @@ export async function mockGetCommanderMeta(
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
 
-/** Intercept POST /api/players/:id/avatar → returns PlayerDto */
+/** Intercept POST /api/players/:id/avatar â†’ returns PlayerDto */
 export async function mockUploadPlayerAvatar(page: Page, playerId: number, response: PlayerDto): Promise<void> {
   await page.route(`**/api/players/${playerId}/avatar`, route => {
     if (route.request().method() === 'POST') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
 
-/** Intercept DELETE /api/players/:id/avatar → returns PlayerDto */
+/** Intercept DELETE /api/players/:id/avatar â†’ returns PlayerDto */
 export async function mockRemovePlayerAvatar(page: Page, playerId: number, response: PlayerDto): Promise<void> {
   await page.route(`**/api/players/${playerId}/avatar`, route => {
     if (route.request().method() === 'DELETE') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
 
-/** Intercept POST /api/stores/:id/discord/test → 204 */
+/** Intercept POST /api/stores/:id/discord/test â†’ 204 */
 export async function mockTestDiscordWebhook(page: Page, storeId: number): Promise<void> {
   await page.route(`**/api/stores/${storeId}/discord/test`, route => {
     if (route.request().method() === 'POST') {
       route.fulfill({ status: 204 });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -476,7 +476,7 @@ export async function mockBulkRegisterConfirm(page: Page, eventId: number, respo
     if (route.request().method() === 'POST') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -490,7 +490,7 @@ export function makeBulkRegisterResultDto(overrides: Partial<BulkRegisterResultD
   };
 }
 
-// ── License ────────────────────────────────────────────────────────────────────
+// â”€â”€ License â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function makeLicenseDto(overrides: Partial<LicenseDto> = {}): LicenseDto {
   return {
@@ -505,14 +505,14 @@ export function makeLicenseDto(overrides: Partial<LicenseDto> = {}): LicenseDto 
   };
 }
 
-// ── Event Templates ────────────────────────────────────────────────────────────
+// â”€â”€ Event Templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function mockGetEventTemplates(page: Page, storeId: number, templates: EventTemplateDto[]): Promise<void> {
   await page.route(`**/api/stores/${storeId}/eventtemplates`, route => {
     if (route.request().method() === 'GET') {
       route.fulfill({ json: templates });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -522,7 +522,7 @@ export async function mockCreateEventTemplate(page: Page, storeId: number, respo
     if (route.request().method() === 'POST') {
       route.fulfill({ status: 201, json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -532,7 +532,7 @@ export async function mockDeleteEventTemplate(page: Page, storeId: number, id: n
     if (route.request().method() === 'DELETE') {
       route.fulfill({ json: { message: 'Template deleted' } });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -550,7 +550,7 @@ export function makeEventTemplateDto(overrides: Partial<EventTemplateDto> = {}):
   };
 }
 
-// ── Store Public Page ──────────────────────────────────────────────────────────
+// â”€â”€ Store Public Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Intercept GET /api/stores/public/:slug and return the given page dto. */
 export async function mockGetStorePublicPage(page: Page, slug: string, response: StorePublicDto): Promise<void> {
@@ -558,7 +558,7 @@ export async function mockGetStorePublicPage(page: Page, slug: string, response:
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -569,7 +569,7 @@ export async function mockGetStorePublicPageNotFound(page: Page, slug: string): 
     if (route.request().method() === 'GET') {
       route.fulfill({ status: 404, json: { error: 'Not found' } });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -595,7 +595,7 @@ export async function mockUploadStoreBackground(page: Page, storeId: number, res
     if (route.request().method() === 'POST') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -620,7 +620,7 @@ export function makeStorePublicTopPlayerDto(overrides: Partial<StorePublicTopPla
   };
 }
 
-// ── Store Groups ───────────────────────────────────────────────────────────────
+// â”€â”€ Store Groups â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Intercept GET /api/storegroups and return the given list. */
 export async function mockGetStoreGroups(page: Page, groups: StoreGroupDto[]): Promise<void> {
@@ -644,13 +644,13 @@ export async function mockCreateStoreGroup(page: Page, response: StoreGroupDto):
   });
 }
 
-/** Intercept POST /api/storegroups/:groupId/stores/:storeId → 204 */
+/** Intercept POST /api/storegroups/:groupId/stores/:storeId â†’ 204 */
 export async function mockAssignStore(page: Page, groupId: number, storeId: number): Promise<void> {
   await page.route(`**/api/storegroups/${groupId}/stores/${storeId}`, route => {
     if (route.request().method() === 'POST') {
       route.fulfill({ status: 204 });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -688,7 +688,7 @@ export async function mockGetRatingHistory(page: Page, playerId: number, respons
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -705,7 +705,7 @@ export async function mockPlayerProfileSubApis(page: Page, playerId: number): Pr
     route.fulfill({ json: [] }));
   await page.route(`**/api/players/${playerId}/wishlist`, route => {
     if (route.request().method() === 'GET') route.fulfill({ json: [] });
-    else route.continue();
+    else route.fallback();
   });
   await page.route(`**/api/players/${playerId}/trades/suggestions`, route =>
     route.fulfill({ json: [] }));
@@ -713,13 +713,13 @@ export async function mockPlayerProfileSubApis(page: Page, playerId: number): Pr
     route.fulfill({ json: [] }));
   await page.route(`**/api/players/${playerId}/trades`, route => {
     if (route.request().method() === 'GET') route.fulfill({ json: [] });
-    else route.continue();
+    else route.fallback();
   });
   await page.route(`**/api/players/${playerId}/ratinghistory`, route =>
     route.fulfill({ json: { playerId, history: [] } }));
 }
 
-// ── Notification helpers ───────────────────────────────────────────────────────
+// â”€â”€ Notification helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function makeNotificationDto(overrides: Partial<NotificationDto> = {}): NotificationDto {
   return {
@@ -738,7 +738,7 @@ export async function mockGetNotificationCount(page: Page, response: Notificatio
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -748,7 +748,7 @@ export async function mockGetNotifications(page: Page, response: NotificationDto
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -758,7 +758,7 @@ export async function mockMarkNotificationRead(page: Page, id: number): Promise<
     if (route.request().method() === 'PUT') {
       route.fulfill({ status: 204, body: '' });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
@@ -768,12 +768,12 @@ export async function mockMarkAllNotificationsRead(page: Page): Promise<void> {
     if (route.request().method() === 'PUT') {
       route.fulfill({ status: 204, body: '' });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }
 
-// ── Store Analytics ──────────────────────────────────────────────────────────
+// â”€â”€ Store Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function makeStoreAnalyticsDto(overrides: Partial<StoreAnalyticsDto> = {}): StoreAnalyticsDto {
   return {
@@ -791,7 +791,7 @@ export async function mockGetStoreAnalytics(page: Page, storeId: number, respons
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {
-      route.continue();
+      route.fallback();
     }
   });
 }

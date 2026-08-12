@@ -153,24 +153,24 @@ test.describe('Store Detail — Public Page link', () => {
   const storeNoSlug   = makeStoreDetailDto({ id: 2, storeName: 'New Store',      slug: null });
 
   test('Public Page link is visible for StoreManager when store has a slug', async ({ page }) => {
-    await loginAs(page, 'StoreManager');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager');
     await mockGetStore(page, storeWithSlug);
     await page.goto('/stores/1');
     await expect(page.getByTestId('public-page-link')).toBeVisible();
   });
 
   test('Public Page link is hidden when store has no slug', async ({ page }) => {
-    await loginAs(page, 'StoreManager');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager');
     await mockGetStore(page, storeNoSlug);
     await page.goto('/stores/2');
     await expect(page.getByTestId('public-page-link')).not.toBeVisible();
   });
 
   test('Public Page link is hidden for Player role', async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, storeWithSlug);
     await page.goto('/stores/1');
     await expect(page.getByTestId('public-page-link')).not.toBeVisible();

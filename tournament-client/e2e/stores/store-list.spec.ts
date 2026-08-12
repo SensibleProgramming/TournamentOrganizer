@@ -16,8 +16,8 @@ test.describe('Store List page (/stores)', () => {
 
   test.describe('when there are no stores', () => {
     test.beforeEach(async ({ page }) => {
-      await loginAs(page, 'Player');
       await stubUnmatchedApi(page);      // catch-all — registered first → evaluated last
+      await loginAs(page, 'Player');
       await mockGetStores(page, []);
       await page.goto('/stores');
     });
@@ -44,8 +44,8 @@ test.describe('Store List page (/stores)', () => {
     ];
 
     test.beforeEach(async ({ page }) => {
-      await loginAs(page, 'Player');
       await stubUnmatchedApi(page);
+      await loginAs(page, 'Player');
       await mockGetStores(page, stores);
       await page.goto('/stores');
     });
@@ -76,8 +76,8 @@ test.describe('Store List page (/stores)', () => {
 
   test.describe('Admin user', () => {
     test.beforeEach(async ({ page }) => {
-      await loginAs(page, 'Administrator');
       await stubUnmatchedApi(page);
+      await loginAs(page, 'Administrator');
       await mockGetStores(page, []);
       await page.goto('/stores');
     });
@@ -102,8 +102,8 @@ test.describe('Store List page (/stores)', () => {
 
   test.describe('Non-admin user', () => {
     test.beforeEach(async ({ page }) => {
-      await loginAs(page, 'Player');
       await stubUnmatchedApi(page);
+      await loginAs(page, 'Player');
       await mockGetStores(page, []);
       await page.goto('/stores');
     });
@@ -118,8 +118,8 @@ test.describe('Store List page (/stores)', () => {
   test('Admin can create a store and it appears in the list', async ({ page }) => {
     const newStore = makeStoreDto({ id: 3, storeName: 'Brand New Shop' });
 
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     // Single route handles both initial GET (empty list) and the POST
     await page.route('**/api/stores', route => {
       if (route.request().method() === 'POST') {
@@ -151,8 +151,8 @@ const freeStore  = makeStoreDto({ id: 3, storeName: 'Free Shop',  tier: null });
 
 test.describe('Store List — tier badges: Admin', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [tier2Store, freeStore]);
     await page.goto('/stores');
   });
@@ -172,8 +172,8 @@ test.describe('Store List — tier badges: Admin', () => {
 
 test.describe('Store List — tier badges: chip colors', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [tier1Store, tier2Store]);
     await page.goto('/stores');
   });
@@ -191,8 +191,8 @@ test.describe('Store List — tier badges: chip colors', () => {
 
 test.describe('Store List — tier badges: Player hidden', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStores(page, [tier2Store]);
     await page.goto('/stores');
   });
@@ -204,8 +204,8 @@ test.describe('Store List — tier badges: Player hidden', () => {
 
 test.describe('Store List — tier badges: StoreEmployee hidden', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetStores(page, [tier1Store]);
     await page.goto('/stores');
   });
@@ -223,8 +223,8 @@ const ungroupedStore = makeStoreDto({ id: 12, storeName: 'Solo Shop', storeGroup
 
 test.describe('Store List — Groups: Admin grouped view', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [groupedStore1, groupedStore2]);
     await page.goto('/stores');
   });
@@ -241,8 +241,8 @@ test.describe('Store List — Groups: Admin grouped view', () => {
 
 test.describe('Store List — Groups: ungrouped', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [ungroupedStore]);
     await page.goto('/stores');
   });
@@ -255,8 +255,8 @@ test.describe('Store List — Groups: ungrouped', () => {
 
 test.describe('Store List — Groups: Player no grouping', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStores(page, [groupedStore1, groupedStore2]);
     await page.goto('/stores');
   });

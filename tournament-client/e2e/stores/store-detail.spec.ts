@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
-import { mockGetStore, mockGetEmployees, mockGetThemes, mockUploadStoreLogo, mockUploadStoreBackground, mockTestDiscordWebhook, mockGetEventTemplates, mockCreateEventTemplate, mockDeleteEventTemplate, makeEventTemplateDto, stubUnmatchedApi, makeStoreDetailDto, makeStoreDto, makeThemeDto } from '../helpers/api-mock';
+import { mockGetStore, mockGetStores, mockGetEmployees, mockGetThemes, mockUploadStoreLogo, mockUploadStoreBackground, mockTestDiscordWebhook, mockGetEventTemplates, mockCreateEventTemplate, mockDeleteEventTemplate, mockGetStoreAnalytics, makeEventTemplateDto, stubUnmatchedApi, makeStoreDetailDto, makeStoreDto, makeThemeDto, makeStoreAnalyticsDto } from '../helpers/api-mock';
 
 // ─── Store Detail (/stores/:id) ───────────────────────────────────────────────
 //
@@ -24,8 +24,8 @@ const EMPLOYEES = [
 
 test.describe('Store Detail — header', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
   });
@@ -45,8 +45,8 @@ test.describe('Store Detail — header', () => {
 
 test.describe('Store Detail — Settings tab (Player / read-only)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
   });
@@ -72,8 +72,8 @@ test.describe('Store Detail — Settings tab (Player / read-only)', () => {
 
 test.describe('Store Detail — Settings tab (StoreManager / editable)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE);
     await mockGetEmployees(page, 1, EMPLOYEES);
@@ -111,8 +111,8 @@ test.describe('Store Detail — Settings tab (StoreManager / editable)', () => {
 
 test.describe('Store Detail — tab visibility: StoreManager', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE);
     await mockGetEmployees(page, 1, EMPLOYEES);
@@ -134,8 +134,8 @@ test.describe('Store Detail — tab visibility: StoreManager', () => {
 
 test.describe('Store Detail — tab visibility: Player', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
   });
@@ -157,8 +157,8 @@ test.describe('Store Detail — tab visibility: Player', () => {
 
 test.describe('Store Detail — Employees tab', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE);
     await mockGetEmployees(page, 1, EMPLOYEES);
@@ -209,8 +209,8 @@ test.describe('Store Detail — Employees tab', () => {
 
 test.describe('Store Detail — Data Management tab', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
     await page.getByRole('tab', { name: 'Data Management' }).click();
@@ -251,8 +251,8 @@ const THEMES = [
 
 test.describe('Store Detail — theme selector', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, THEMES);
     await mockGetStore(page, STORE);
     await mockGetEmployees(page, STORE.id, []);
@@ -282,7 +282,7 @@ test.describe('Store Detail — theme selector', () => {
         putBody = route.request().postDataJSON();
         route.fulfill({ json: { ...STORE, themeId: 2, themeCssClass: 'theme-dark' } });
       } else {
-        route.continue();
+        route.fallback();
       }
     });
 
@@ -298,8 +298,8 @@ test.describe('Store Detail — theme selector', () => {
 
 test.describe('Store Detail — logo: placeholder shown when no logo', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop' }));
     await page.goto('/stores/1');
   });
@@ -315,8 +315,8 @@ test.describe('Store Detail — logo: placeholder shown when no logo', () => {
 
 test.describe('Store Detail — logo: image shown when logoUrl is set', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', logoUrl: '/logos/1.png' }));
     await page.goto('/stores/1');
   });
@@ -332,8 +332,8 @@ test.describe('Store Detail — logo: image shown when logoUrl is set', () => {
 
 test.describe('Store Detail — logo: upload updates the image', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop' }));
     await mockUploadStoreLogo(page, 1, makeStoreDto({ id: 1, storeName: 'Downtown Game Shop', logoUrl: '/logos/1.png' }));
     await page.goto('/stores/1');
@@ -365,8 +365,8 @@ test.describe('Store Detail — logo: upload updates the image', () => {
 
 test.describe('Store Detail — Discord: connected', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: true }));
     await mockGetEmployees(page, 1, []);
@@ -388,8 +388,8 @@ test.describe('Store Detail — Discord: connected', () => {
 
 test.describe('Store Detail — Discord: not connected', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: false }));
     await mockGetEmployees(page, 1, []);
@@ -407,8 +407,8 @@ test.describe('Store Detail — Discord: not connected', () => {
 
 test.describe('Store Detail — Discord: URL masked', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: false }));
     await mockGetEmployees(page, 1, []);
@@ -423,8 +423,8 @@ test.describe('Store Detail — Discord: URL masked', () => {
 
 test.describe('Store Detail — Discord: save webhook', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: false }));
     await mockGetEmployees(page, 1, []);
@@ -438,7 +438,7 @@ test.describe('Store Detail — Discord: save webhook', () => {
         putBody = route.request().postDataJSON();
         route.fulfill({ json: makeStoreDetailDto({ id: 1, hasDiscordWebhook: true }) });
       } else {
-        route.continue();
+        route.fallback();
       }
     });
 
@@ -451,8 +451,8 @@ test.describe('Store Detail — Discord: save webhook', () => {
 
 test.describe('Store Detail — Discord: test button', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: true }));
     await mockGetEmployees(page, 1, []);
@@ -472,8 +472,8 @@ test.describe('Store Detail — Discord: test button', () => {
 
 test.describe('Store Detail — Discord: hidden for Player', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: true }));
     await page.goto('/stores/1');
   });
@@ -490,8 +490,8 @@ const TEMPLATE_2 = makeEventTemplateDto({ id: 2, storeId: 1, name: 'Two-Headed G
 
 test.describe('Store Detail — Event Templates: list', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetEmployees(page, 1, []);
     await mockGetEventTemplates(page, 1, [TEMPLATE_1, TEMPLATE_2]);
@@ -517,8 +517,8 @@ test.describe('Store Detail — Event Templates: list', () => {
 
 test.describe('Store Detail — Event Templates: create', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetEmployees(page, 1, []);
     await mockGetEventTemplates(page, 1, []);
@@ -547,8 +547,8 @@ test.describe('Store Detail — Event Templates: create', () => {
 
 test.describe('Store Detail — Event Templates: delete', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetEmployees(page, 1, []);
     await mockGetEventTemplates(page, 1, [TEMPLATE_1]);
@@ -567,8 +567,8 @@ test.describe('Store Detail — Event Templates: delete', () => {
 
 test.describe('Store Detail — Event Templates: hidden for Player', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
   });
@@ -582,8 +582,8 @@ test.describe('Store Detail — Event Templates: hidden for Player', () => {
 
 test.describe('Store Detail — Upload Background (StoreManager)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE);
     await mockGetEmployees(page, 1, EMPLOYEES);
@@ -597,8 +597,8 @@ test.describe('Store Detail — Upload Background (StoreManager)', () => {
 
 test.describe('Store Detail — Upload Background (Player)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
   });
@@ -628,8 +628,8 @@ function makeTier1License(overrides: Partial<{ expiresDate: string }> = {}) {
 
 test.describe('Store Detail — expiry warning: within 30 days', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(15) }) }));
     await mockGetEmployees(page, 1, []);
@@ -648,8 +648,8 @@ test.describe('Store Detail — expiry warning: within 30 days', () => {
 
 test.describe('Store Detail — expiry warning: critical (≤7 days)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(5) }) }));
     await mockGetEmployees(page, 1, []);
@@ -663,8 +663,8 @@ test.describe('Store Detail — expiry warning: critical (≤7 days)', () => {
 
 test.describe('Store Detail — expiry warning: not shown >30 days', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(45) }) }));
     await mockGetEmployees(page, 1, []);
@@ -678,8 +678,8 @@ test.describe('Store Detail — expiry warning: not shown >30 days', () => {
 
 test.describe('Store Detail — expiry warning: hidden for Player', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(10) }) }));
     await page.goto('/stores/1');
   });
@@ -691,8 +691,8 @@ test.describe('Store Detail — expiry warning: hidden for Player', () => {
 
 test.describe('Store Detail — expiry warning: expired', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(-1) }) }));
     await mockGetEmployees(page, 1, []);
@@ -720,8 +720,8 @@ function makeTrialLicense(overrides: Partial<ReturnType<typeof makeTier1License>
 
 test.describe('Store Detail — License tab: trial active', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier2' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTrialLicense() }));
     await mockGetEmployees(page, 1, []);
@@ -739,8 +739,8 @@ test.describe('Store Detail — License tab: trial active', () => {
 
 test.describe('Store Detail — License tab: trial inactive', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier2' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTrialLicense({ isInTrial: false, trialExpiresDate: undefined }) }));
     await mockGetEmployees(page, 1, []);
@@ -754,11 +754,13 @@ test.describe('Store Detail — License tab: trial inactive', () => {
 
 test.describe('Store Detail — License tab: Admin trial controls', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
+    await mockGetStores(page, []);
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTrialLicense() }));
     await mockGetEmployees(page, 1, []);
+    await mockGetStoreAnalytics(page, 1, makeStoreAnalyticsDto());
     await page.goto('/stores/1');
   });
 
@@ -781,8 +783,8 @@ function makeGracePeriodLicense(overrides: Partial<ReturnType<typeof makeTier1Li
 
 test.describe('Store Detail — grace period warning', () => {
   test('grace warning banner visible when expired but within grace period (StoreManager)', async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeGracePeriodLicense() }));
     await mockGetEmployees(page, 1, []);
@@ -791,8 +793,8 @@ test.describe('Store Detail — grace period warning', () => {
   });
 
   test('grace warning banner absent when license is not yet expired', async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(30) }) }));
     await mockGetEmployees(page, 1, []);
@@ -801,8 +803,8 @@ test.describe('Store Detail — grace period warning', () => {
   });
 
   test('grace warning banner absent when gracePeriodDays = 0 and expired', async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeGracePeriodLicense({ gracePeriodDays: 0 }) }));
     await mockGetEmployees(page, 1, []);
@@ -811,8 +813,8 @@ test.describe('Store Detail — grace period warning', () => {
   });
 
   test('grace warning banner NOT visible for Player role', async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeGracePeriodLicense() }));
     await mockGetEmployees(page, 1, []);

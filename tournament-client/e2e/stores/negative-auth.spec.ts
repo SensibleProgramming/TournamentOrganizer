@@ -44,8 +44,8 @@ test.describe('Negative auth — unauthenticated redirect', () => {
 
 test.describe('Negative auth — Player: upload logo button absent', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
   });
@@ -60,8 +60,8 @@ test.describe('Negative auth — Player: upload logo button absent', () => {
 
 test.describe('Negative auth — StoreEmployee: License tab absent', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
@@ -77,8 +77,8 @@ test.describe('Negative auth — StoreEmployee: License tab absent', () => {
 
 test.describe('Negative auth — StoreEmployee: Save button absent', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE);
     await page.goto('/stores/1');
@@ -97,8 +97,8 @@ const REG_EVENT = makeEventDto({ id: EVENT_ID, status: 'Registration', playerCou
 
 test.describe('Negative auth — Player: register 403 shown as snackbar error', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1 });
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []); // no players → self-register button visible

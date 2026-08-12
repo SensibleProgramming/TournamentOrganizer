@@ -15,8 +15,8 @@ const CAROL  = makePlayerDto({ id: 3, name: 'Carol',  email: 'carol@test.com',  
 
 test.describe('Player List — heading', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetPlayers(page, []);
     await page.goto('/players');
   });
@@ -30,8 +30,8 @@ test.describe('Player List — heading', () => {
 
 test.describe('Player List — empty state', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetPlayers(page, []);
     await page.goto('/players');
   });
@@ -45,8 +45,8 @@ test.describe('Player List — empty state', () => {
 
 test.describe('Player List — populated', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetPlayers(page, [ALICE, BOB]);
     await page.goto('/players');
   });
@@ -71,8 +71,8 @@ test.describe('Player List — populated', () => {
 
 test.describe('Player List — paginator', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     // 26 players to verify first page shows 25
     const players = Array.from({ length: 26 }, (_, i) =>
       makePlayerDto({ id: i + 1, name: `Player ${i + 1}`, email: `player${i + 1}@test.com` })
@@ -99,8 +99,8 @@ test.describe('Player List — paginator', () => {
 
 test.describe('Player List — name filter', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetPlayers(page, [ALICE, BOB]);
     await page.goto('/players');
   });
@@ -124,8 +124,8 @@ test.describe('Player List — name filter', () => {
 
 test.describe('Player List — email filter', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetPlayers(page, [ALICE, BOB]);
     await page.goto('/players');
   });
@@ -142,8 +142,8 @@ test.describe('Player List — email filter', () => {
 
 test.describe('Player List — combined filter (AND logic)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetPlayers(page, [ALICE, BOB]);
     await page.goto('/players');
   });
@@ -163,8 +163,8 @@ test.describe('Player List — combined filter (AND logic)', () => {
 
 test.describe('Player List — role UI: Player', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetPlayers(page, [ALICE]);
     await page.goto('/players');
   });
@@ -182,8 +182,8 @@ test.describe('Player List — role UI: Player', () => {
 
 test.describe('Player List — role UI: StoreEmployee', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetPlayers(page, []);
     await page.goto('/players');
   });
@@ -213,8 +213,8 @@ test.describe('Player List — role UI: StoreEmployee', () => {
 test('StoreEmployee can register a player and they appear in the list', async ({ page }) => {
   const newPlayer = makePlayerDto({ id: 99, name: 'New Player', email: 'new@test.com' });
 
-  await loginAs(page, 'StoreEmployee', { storeId: 1 });
   await stubUnmatchedApi(page);
+  await loginAs(page, 'StoreEmployee', { storeId: 1 });
 
   let registered = false;
   await page.route('**/api/players', route => {
@@ -249,13 +249,13 @@ test.describe('Player List — offline cache', () => {
   ];
 
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: 1 });
     // Pre-seed localStorage before Angular boots
     await page.addInitScript((players) => {
       localStorage.setItem('to_store_1_players', JSON.stringify(players));
       localStorage.setItem('to_store_1_players_meta', JSON.stringify([]));
     }, CACHED_PLAYERS);
-    await stubUnmatchedApi(page);
     await page.route('**/api/players', route => route.fulfill({ status: 500 }));
     await page.goto('/players');
   });

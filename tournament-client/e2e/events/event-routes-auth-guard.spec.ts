@@ -32,8 +32,8 @@ test.describe('Event Detail — auth guard', () => {
   });
 
   test('allows authenticated user to access event detail', async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetStores(page, []);
     await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'Registration', playerCount: 0, storeId: 1 }));
     await mockGetEventPlayers(page, EVENT_ID, []);
@@ -56,8 +56,8 @@ test.describe('Pairings Display — auth guard', () => {
   });
 
   test('allows authenticated user to access pairings', async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEventPairings(page, EVENT_ID, makePairingsDto());
     await page.goto(`/events/${EVENT_ID}/pairings`);
     await expect(page).not.toHaveURL(/\/login/);

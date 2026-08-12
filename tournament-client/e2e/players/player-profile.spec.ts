@@ -28,8 +28,8 @@ const ALICE_DTO     = makePlayerDto({ id: 1, name: 'Alice', email: 'alice@test.c
 
 test.describe('Player Profile — online', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier2' });
     await mockGetPlayerProfile(page, ALICE_PROFILE);
     await page.goto('/players/1');
   });
@@ -52,13 +52,13 @@ test.describe('Player Profile — online', () => {
 
 test.describe('Player Profile — offline (API 500)', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: 1 });
     // Pre-seed localStorage cache so the component can show cached player info
     await page.addInitScript((player) => {
       localStorage.setItem('to_store_1_players', JSON.stringify([player]));
       localStorage.setItem('to_store_1_players_meta', JSON.stringify([]));
     }, ALICE_DTO);
-    await stubUnmatchedApi(page);
     await page.route('**/api/players/1/profile', route => route.fulfill({ status: 500 }));
     await page.goto('/players/1');
   });
@@ -83,8 +83,8 @@ const PLAYER_ID = 1;
 
 test.describe('Player Profile — Commander Stats: display', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetCommanderStats(page, PLAYER_ID, {
       playerId: PLAYER_ID,
       commanders: [makeCommanderStatDto({ commanderName: 'Atraxa', gamesPlayed: 5, wins: 3, avgFinish: 1.8 })],
@@ -108,8 +108,8 @@ test.describe('Player Profile — Commander Stats: display', () => {
 
 test.describe('Player Profile — Commander Stats: multiple commanders', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetCommanderStats(page, PLAYER_ID, {
       playerId: PLAYER_ID,
       commanders: [
@@ -131,8 +131,8 @@ test.describe('Player Profile — Commander Stats: multiple commanders', () => {
 
 test.describe('Player Profile — Commander Stats: empty', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetCommanderStats(page, PLAYER_ID, { playerId: PLAYER_ID, commanders: [] });
     await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID }));
     await page.goto(`/players/${PLAYER_ID}`);
@@ -145,8 +145,8 @@ test.describe('Player Profile — Commander Stats: empty', () => {
 
 test.describe('Player Profile — Commander Stats: zero games guard', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetCommanderStats(page, PLAYER_ID, {
       playerId: PLAYER_ID,
       commanders: [makeCommanderStatDto({ commanderName: 'Atraxa', gamesPlayed: 0, wins: 0, avgFinish: 0 })],
@@ -202,20 +202,13 @@ test.describe('Player Profile — avatar: placeholder', () => {
 test.describe('Player Profile — avatar: upload (own player)', () => {
   test.beforeEach(async ({ page }) => {
     await stubUnmatchedApi(page);
-    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, email: 'alice@test.com', avatarUrl: null }));
+    // canManageAvatar compares AuthService.currentUser.email to profile.email;
+    // AuthService keeps its token in-memory only (never localStorage), so the
+    // profile's email must match loginAs('Player')'s generated email directly
+    // rather than trying to inject a matching token into localStorage.
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1, email: 'test-player@example.com', avatarUrl: null }));
     await mockUploadPlayerAvatar(page, 1, makePlayerDto({ id: 1, avatarUrl: '/avatars/1.png' }));
     await loginAs(page, 'Player', { id: 1, playerId: 1 });
-    // Inject matching email so canManageAvatar returns true
-    await page.addInitScript(() => {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        const parts = token.split('.');
-        const payload = JSON.parse(atob(parts[1]));
-        payload.email = 'alice@test.com';
-        parts[1] = btoa(JSON.stringify(payload));
-        localStorage.setItem('auth_token', parts.join('.'));
-      }
-    });
     await page.goto('/players/1');
   });
 
@@ -405,8 +398,8 @@ test.describe('Player Profile — card autocomplete: Scryfall unavailable', () =
 
 test.describe('Player Profile — Rating History: chart shown', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockPlayerProfileSubApis(page, PLAYER_ID);
     await mockGetRatingHistory(page, PLAYER_ID, {
       playerId: PLAYER_ID,
@@ -432,8 +425,8 @@ test.describe('Player Profile — Rating History: chart shown', () => {
 
 test.describe('Player Profile — Rating History: hidden with < 2 points', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockPlayerProfileSubApis(page, PLAYER_ID);
     await mockGetRatingHistory(page, PLAYER_ID, {
       playerId: PLAYER_ID,
@@ -451,8 +444,8 @@ test.describe('Player Profile — Rating History: hidden with < 2 points', () =>
 
 test.describe('Player Profile — Rating History: hidden when empty', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockPlayerProfileSubApis(page, PLAYER_ID);
     await mockGetRatingHistory(page, PLAYER_ID, { playerId: PLAYER_ID, history: [] });
     await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID }));
@@ -469,8 +462,8 @@ test.describe('Player Profile — Rating History: hidden when empty', () => {
 
 test.describe('Player Profile — Badges: display', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetPlayerProfile(page, makePlayerProfile({
       id: PLAYER_ID,
       badges: [makePlayerBadgeDto({ badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z' })],
@@ -489,8 +482,8 @@ test.describe('Player Profile — Badges: display', () => {
 
 test.describe('Player Profile — Badges: multiple badges', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetPlayerProfile(page, makePlayerProfile({
       id: PLAYER_ID,
       badges: [
@@ -511,8 +504,8 @@ test.describe('Player Profile — Badges: multiple badges', () => {
 
 test.describe('Player Profile — Badges: no badges', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID, badges: [] }));
     await page.goto(`/players/${PLAYER_ID}`);
   });
@@ -524,8 +517,8 @@ test.describe('Player Profile — Badges: no badges', () => {
 
 test.describe('Player Profile — Badges: tooltip', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetPlayerProfile(page, makePlayerProfile({
       id: PLAYER_ID,
       badges: [makePlayerBadgeDto({ badgeKey: 'veteran', displayName: 'Veteran', awardedAt: '2026-01-15T00:00:00Z' })],

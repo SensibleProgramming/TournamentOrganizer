@@ -52,8 +52,8 @@ async function setupStoreManager(page: any, opts: { licenseTier: 'Tier1' | 'Tier
 
 test.describe('Store Detail — Analytics tab: Tier3 visible', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier3' });
     await setupStoreManager(page, { licenseTier: 'Tier3' });
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier3' });
     await mockGetStoreAnalytics(page, STORE_ID, ANALYTICS_DATA);
     await page.goto(`/stores/${STORE_ID}`);
   });
@@ -79,8 +79,8 @@ test.describe('Store Detail — Analytics tab: Tier3 visible', () => {
 
 test.describe('Store Detail — Analytics tab: upgrade prompt for Tier2', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier2' });
     await setupStoreManager(page, { licenseTier: 'Tier2' });
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier2' });
     await page.goto(`/stores/${STORE_ID}`);
   });
 
@@ -95,8 +95,8 @@ test.describe('Store Detail — Analytics tab: upgrade prompt for Tier2', () => 
 
 test.describe('Store Detail — Analytics tab: empty state', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier3' });
     await setupStoreManager(page, { licenseTier: 'Tier3' });
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier3' });
     await mockGetStoreAnalytics(page, STORE_ID, makeStoreAnalyticsDto());
     await page.goto(`/stores/${STORE_ID}`);
   });
@@ -112,8 +112,8 @@ test.describe('Store Detail — Analytics tab: empty state', () => {
 
 test.describe('Store Detail — Analytics tab: Admin always sees', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator', { storeId: STORE_ID });
     await mockGetThemes(page, THEMES);
     await mockGetEmployees(page, STORE_ID, []);
     await mockGetEventTemplates(page, STORE_ID, []);
@@ -136,8 +136,8 @@ test.describe('Store Detail — Analytics tab: Admin always sees', () => {
 
 test.describe('Store Detail — Analytics tab: Player absent', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetThemes(page, THEMES);
     await mockGetStore(page, STORE);
     await page.goto(`/stores/${STORE_ID}`);

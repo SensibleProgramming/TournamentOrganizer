@@ -17,8 +17,8 @@ const DONE_EVENT   = makeEventDto({ id: 3, name: 'Spring Championship',    statu
 
 test.describe('Event List — heading', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetEvents(page, []);
     await page.goto('/events');
   });
@@ -32,8 +32,8 @@ test.describe('Event List — heading', () => {
 
 test.describe('Event List — empty states', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetEvents(page, []);
     await page.goto('/events');
   });
@@ -61,8 +61,8 @@ test.describe('Event List — empty states', () => {
 
 test.describe('Event List — populated (Registration tab)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetEvents(page, [REG_EVENT]);
     await page.goto('/events');
   });
@@ -86,8 +86,8 @@ test.describe('Event List — populated (Registration tab)', () => {
 
 test.describe('Event List — tab filtering', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetEvents(page, [REG_EVENT, INPROG_EVENT, DONE_EVENT]);
     await page.goto('/events');
   });
@@ -122,8 +122,8 @@ test.describe('Event List — Full badge and slot count', () => {
   const UNLIMITED_EVENT = makeEventDto({ id: 6, name: 'Unlimited Event', status: 'Registration', playerCount: 5, maxPlayers: null });
 
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetEvents(page, [FULL_EVENT, PARTIAL_EVENT, UNLIMITED_EVENT]);
     await page.goto('/events');
   });
@@ -148,8 +148,8 @@ test.describe('Event List — Full badge and slot count', () => {
 
 test.describe('Event List — role-based UI: Player', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetEvents(page, [REG_EVENT]);
     await page.goto('/events');
   });
@@ -167,8 +167,8 @@ test.describe('Event List — role-based UI: Player', () => {
 
 test.describe('Event List — role-based UI: StoreEmployee', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEvents(page, []);
     await page.goto('/events');
   });
@@ -202,8 +202,8 @@ test.describe('Event List — role-based UI: StoreEmployee', () => {
 
 test.describe('Event List — role-based UI: Remove button', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEvents(page, [REG_EVENT]);
     await page.goto('/events');
   });
@@ -216,8 +216,8 @@ test.describe('Event List — role-based UI: Remove button', () => {
 // ── Create event (happy path) ─────────────────────────────────────────────────
 
 test('StoreEmployee can create an event and it appears in the list', async ({ page }) => {
-  await loginAs(page, 'StoreEmployee', { storeId: 1 });
   await stubUnmatchedApi(page);
+  await loginAs(page, 'StoreEmployee', { storeId: 1 });
   await mockGetEvents(page, []);
   await page.goto('/events');
 
@@ -234,8 +234,8 @@ test('StoreEmployee can create an event and it appears in the list', async ({ pa
 // ── Remove event (happy path) ─────────────────────────────────────────────────
 
 test('StoreEmployee can remove an event', async ({ page }) => {
-  await loginAs(page, 'StoreEmployee', { storeId: 1 });
   await stubUnmatchedApi(page);
+  await loginAs(page, 'StoreEmployee', { storeId: 1 });
 
   let removed = false;
   await page.route('**/api/events', route => {
@@ -272,13 +272,13 @@ test.describe('Event List — offline / localStorage cache', () => {
   ];
 
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: 1 });
     // Pre-seed the LocalTable before Angular boots (storeId 1 → prefix 'to_store_1')
     await page.addInitScript((events) => {
       localStorage.setItem('to_store_1_events', JSON.stringify(events));
       localStorage.setItem('to_store_1_events_meta', JSON.stringify([]));
     }, CACHED_EVENTS);
-    await stubUnmatchedApi(page);
     // loadAllEvents() early-exits from cache — this 500 is insurance
     await page.route('**/api/events', route => route.fulfill({ status: 500 }));
     await page.goto('/events');
@@ -298,8 +298,8 @@ test.describe('Event List — offline / localStorage cache', () => {
 
 test.describe('Event List — role-based UI: Admin, no store selected', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [makeStoreDto({ id: 1, storeName: 'Test Game Shop' })]);
     await mockGetEvents(page, []);
     await page.goto('/events');
@@ -317,13 +317,13 @@ const SYNCED_EVENT  = makeEventDto({ id: 99, name: 'Synced Event',  status: 'Reg
 
 test.describe('Event List — sync button visibility', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: 1 });
     // Seed an offline (negative-ID) event into localStorage before Angular boots.
     await page.addInitScript((evt) => {
       localStorage.setItem('to_store_1_events', JSON.stringify([evt]));
       localStorage.setItem('to_store_1_events_meta', JSON.stringify([[-1, 'added']]));
     }, OFFLINE_EVENT);
-    await stubUnmatchedApi(page);
     await page.route('**/api/events', route => route.fulfill({ status: 500 }));
     await page.goto('/events');
   });
@@ -341,8 +341,8 @@ test.describe('Event List — sync button visibility', () => {
 
 test.describe('Event List — sync button NOT visible on synced event', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEvents(page, [SYNCED_EVENT]);
     await page.goto('/events');
   });
@@ -355,13 +355,13 @@ test.describe('Event List — sync button NOT visible on synced event', () => {
 
 test.describe('Event List — sync button click', () => {
   test('clicking Sync calls POST /api/events and shows success snackbar', async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: 1 });
     const CREATED_EVENT = makeEventDto({ id: 5, name: 'Offline Event', status: 'Registration' });
     await page.addInitScript((evt) => {
       localStorage.setItem('to_store_1_events', JSON.stringify([evt]));
       localStorage.setItem('to_store_1_events_meta', JSON.stringify([[-1, 'added']]));
     }, OFFLINE_EVENT);
-    await stubUnmatchedApi(page);
     // loadAllEvents early-exits from cache; let POST /api/events succeed with a real ID
     await page.route('**/api/events', route => {
       if (route.request().method() === 'POST') {
@@ -379,12 +379,12 @@ test.describe('Event List — sync button click', () => {
   });
 
   test('clicking Sync does NOT navigate away from the event list', async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await page.addInitScript((evt) => {
       localStorage.setItem('to_store_1_events', JSON.stringify([evt]));
       localStorage.setItem('to_store_1_events_meta', JSON.stringify([[-1, 'added']]));
     }, OFFLINE_EVENT);
-    await stubUnmatchedApi(page);
     await page.route('**/api/events', route => route.fulfill({ status: 500 }));
     await page.goto('/events');
 
@@ -395,12 +395,12 @@ test.describe('Event List — sync button click', () => {
   });
 
   test('Player does NOT see a Sync button even for an offline event', async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'Player');
     await page.addInitScript((evt) => {
       localStorage.setItem('to_store_1_events', JSON.stringify([evt]));
       localStorage.setItem('to_store_1_events_meta', JSON.stringify([[-1, 'added']]));
     }, OFFLINE_EVENT);
-    await stubUnmatchedApi(page);
     await page.route('**/api/events', route => route.fulfill({ status: 500 }));
     await page.goto('/events');
 
@@ -412,8 +412,8 @@ test.describe('Event List — sync button click', () => {
 
 test.describe('Event List — role-based UI: Admin, store selected via toolbar', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [makeStoreDto({ id: 1, storeName: 'Test Game Shop' })]);
     await mockGetEvents(page, []);
     await page.goto('/events');
@@ -438,8 +438,8 @@ const TEMPLATE = makeEventTemplateDto({ id: 1, storeId: 1, name: 'Friday Night C
 
 test.describe('Event List — Use Template: visible for StoreEmployee', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEvents(page, []);
     await mockGetEventTemplates(page, 1, [TEMPLATE]);
     await page.goto('/events');
@@ -464,8 +464,8 @@ test.describe('Event List — Use Template: visible for StoreEmployee', () => {
 
 test.describe('Event List — Use Template: hidden for Player', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetEvents(page, []);
     await page.goto('/events');
   });

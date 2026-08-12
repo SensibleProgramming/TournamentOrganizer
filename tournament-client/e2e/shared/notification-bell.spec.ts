@@ -8,6 +8,8 @@ import {
   mockMarkNotificationRead,
   mockMarkAllNotificationsRead,
   mockPlayerProfileSubApis,
+  mockGetEvents,
+  mockGetLeaderboard,
 } from '../helpers/api-mock';
 
 // ─── Notification Bell ────────────────────────────────────────────────────────
@@ -19,8 +21,10 @@ import {
 
 test.describe('Notification Bell — visibility', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
+    await mockGetEvents(page, []);
+    await mockGetLeaderboard(page, []);
     await mockGetNotificationCount(page, { unread: 3 });
     await mockGetNotifications(page, []);
     await page.goto('/');
@@ -39,8 +43,10 @@ test.describe('Notification Bell — visibility', () => {
 
 test.describe('Notification Bell — hidden for Free', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Free' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Free' });
+    await mockGetEvents(page, []);
+    await mockGetLeaderboard(page, []);
     await page.goto('/');
   });
 
@@ -56,8 +62,10 @@ test.describe('Notification Bell — open panel', () => {
   const notif2 = makeNotificationDto({ id: 2, message: 'Trade match with Bob!' });
 
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
+    await mockGetEvents(page, []);
+    await mockGetLeaderboard(page, []);
     await mockGetNotificationCount(page, { unread: 2 });
     await mockGetNotifications(page, [notif1, notif2]);
     await mockMarkNotificationRead(page, 1);
@@ -78,8 +86,10 @@ test.describe('Notification Bell — mark read', () => {
   const notif = makeNotificationDto({ id: 5, message: 'Trade match found!', isRead: false });
 
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
+    await mockGetEvents(page, []);
+    await mockGetLeaderboard(page, []);
     await mockGetNotificationCount(page, { unread: 1 });
     await mockGetNotifications(page, [notif]);
     await mockMarkNotificationRead(page, 5);
@@ -104,8 +114,10 @@ test.describe('Notification Bell — mark all read', () => {
   const notif2 = makeNotificationDto({ id: 2, message: 'Match 2', isRead: false });
 
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
+    await mockGetEvents(page, []);
+    await mockGetLeaderboard(page, []);
     await mockGetNotificationCount(page, { unread: 2 });
     await mockGetNotifications(page, [notif1, notif2]);
     await mockMarkAllNotificationsRead(page);
@@ -126,8 +138,10 @@ test.describe('Notification Bell — mark all read', () => {
 
 test.describe('Notification Bell — empty', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
+    await mockGetEvents(page, []);
+    await mockGetLeaderboard(page, []);
     await mockGetNotificationCount(page, { unread: 0 });
     await mockGetNotifications(page, []);
     await page.goto('/');
@@ -145,8 +159,10 @@ test.describe('Notification Bell — navigate on click', () => {
   const notif = makeNotificationDto({ id: 7, message: 'Trade with player 5', linkPath: '/players/5', isRead: false });
 
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1, licenseTier: 'Tier2' });
+    await mockGetEvents(page, []);
+    await mockGetLeaderboard(page, []);
     await mockPlayerProfileSubApis(page, 5);
     await mockGetNotificationCount(page, { unread: 1 });
     await mockGetNotifications(page, [notif]);

@@ -26,8 +26,8 @@ const PROFILE = makePlayerProfile({
 
 test.describe('Player Profile Tier Gate — Tier2 user sees Trading tab', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier2' });
     await mockPlayerProfileSubApis(page, PLAYER_ID);
     await mockGetPlayerProfile(page, PROFILE);
     await page.goto(`/players/${PLAYER_ID}`);
@@ -42,8 +42,8 @@ test.describe('Player Profile Tier Gate — Tier2 user sees Trading tab', () => 
 
 test.describe('Player Profile Tier Gate — Free tier user does NOT see Trading tab', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Free' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Free' });
     await mockPlayerProfileSubApis(page, PLAYER_ID);
     await mockGetPlayerProfile(page, PROFILE);
     await page.goto(`/players/${PLAYER_ID}`);
@@ -58,8 +58,8 @@ test.describe('Player Profile Tier Gate — Free tier user does NOT see Trading 
 
 test.describe('Player Profile Tier Gate — Tier1 user does NOT see Trading tab', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await mockPlayerProfileSubApis(page, PLAYER_ID);
     await mockGetPlayerProfile(page, PROFILE);
     await page.goto(`/players/${PLAYER_ID}`);

@@ -28,6 +28,10 @@ if ($backendExit -eq 0) {
 }
 $backendOutput -split "`n" | Where-Object { $_ -match 'error|warning' } | ForEach-Object { Write-Output $_.Trim() }
 
+if ($backendExit -ne 0 -and $backendOutput -match 'MSB3021|being used by another process|cannot access the file') {
+    Write-Output 'HINT: Build failed on a locked file - the API is likely still running (port 5021). Stop it and retry.'
+}
+
 Write-Output ''
 Write-Output '--- Frontend: ng build ---'
 Push-Location (Join-Path $RepoRoot 'tournament-client')
