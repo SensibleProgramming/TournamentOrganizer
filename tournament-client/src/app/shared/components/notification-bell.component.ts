@@ -24,7 +24,7 @@ import { NotificationDto } from '../../core/models/api.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule, MatButtonModule, MatMenuModule, MatBadgeModule, DatePipe],
   template: `
-    @if (authService.currentUser && authService.isTier2) {
+    @if (visible) {
       <button mat-icon-button [matMenuTriggerFor]="notifMenu" (click)="loadNotifications()" aria-label="Notifications">
         <mat-icon [matBadge]="unreadCount || null" matBadgeColor="warn">notifications</mat-icon>
       </button>
@@ -80,12 +80,26 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   notifications: NotificationDto[] = [];
   unreadCount = 0;
+  visible = false;
 
   readonly POLL_INTERVAL_MS = 60_000;
   private pollSub: Subscription | null = null;
+  private authSub: Subscription | null = null;
 
   ngOnInit(): void {
-    if (!this.authService.currentUser || !this.authService.isTier2) return;
+    this.authSub = this.authService.currentUser$.subscribe(() => {
+      const shouldShow = !!this.authService.currentUser && this.authService.isTier2;
+      if (shouldShow && !this.visible) {
+        this.startPolling();
+      } else if (!shouldShow && this.visible) {
+        this.stopPolling();
+      }
+      this.visible = shouldShow;
+      this.cdr.detectChanges();
+    });
+  }
+
+  private startPolling(): void {
     this.pollSub = interval(this.POLL_INTERVAL_MS)
       .pipe(
         startWith(0),
@@ -102,8 +116,14 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
       });
   }
 
-  ngOnDestroy(): void {
+  private stopPolling(): void {
     this.pollSub?.unsubscribe();
+    this.pollSub = null;
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
+    this.authSub?.unsubscribe();
   }
 
   loadNotifications(): void {

@@ -32,8 +32,8 @@ const THEMES = [makeThemeDto()];
 
 test.describe('Store Tier Gate — Free tier StoreEmployee', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Free' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Free' });
     await mockGetThemes(page, THEMES);
     await mockGetStore(page, BASE_STORE);
     await page.goto(`/stores/${STORE_ID}`);
@@ -58,8 +58,8 @@ test.describe('Store Tier Gate — Free tier StoreEmployee', () => {
 
 test.describe('Store Tier Gate — Tier1 StoreEmployee', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await mockGetThemes(page, THEMES);
     await mockGetStore(page, BASE_STORE);
     await page.goto(`/stores/${STORE_ID}`);
@@ -78,8 +78,8 @@ test.describe('Store Tier Gate — Tier1 StoreEmployee', () => {
 
 test.describe('Store Tier Gate — Tier1 StoreManager', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await mockGetThemes(page, THEMES);
     await mockGetEmployees(page, STORE_ID, []);
     await mockGetEventTemplates(page, STORE_ID, []);
@@ -96,8 +96,8 @@ test.describe('Store Tier Gate — Tier1 StoreManager', () => {
 
 test.describe('Store Tier Gate — Free tier StoreManager (no save)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Free' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Free' });
     await mockGetThemes(page, THEMES);
     await mockGetEmployees(page, STORE_ID, []);
     await mockGetEventTemplates(page, STORE_ID, []);
@@ -114,8 +114,8 @@ test.describe('Store Tier Gate — Free tier StoreManager (no save)', () => {
 
 test.describe('Store Tier Gate — License tab tier chip', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await mockGetThemes(page, THEMES);
     await mockGetEmployees(page, STORE_ID, []);
     await mockGetEventTemplates(page, STORE_ID, []);
@@ -144,8 +144,8 @@ test.describe('Store Tier Gate — License tab tier chip', () => {
 test.describe('Store Tier Gate — License expiry warning', () => {
   test('shows expiry warning when license expires in 10 days', async ({ page }) => {
     const soonDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await mockGetThemes(page, THEMES);
     await mockGetEmployees(page, STORE_ID, []);
     await mockGetEventTemplates(page, STORE_ID, []);
@@ -162,8 +162,8 @@ test.describe('Store Tier Gate — License expiry warning', () => {
 
   test('does NOT show expiry warning when license expires far in future', async ({ page }) => {
     const farDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await mockGetThemes(page, THEMES);
     await mockGetEmployees(page, STORE_ID, []);
     await mockGetEventTemplates(page, STORE_ID, []);

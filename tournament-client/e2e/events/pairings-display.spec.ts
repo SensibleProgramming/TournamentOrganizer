@@ -6,8 +6,8 @@ import { stubUnmatchedApi, mockGetEventPairings, makePairingsDto } from '../help
 
 test.describe('Pairings Display — background display', () => {
   test('header has background when backgroundImageUrl is set', async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEventPairings(page, 1, makePairingsDto({ backgroundImageUrl: '/backgrounds/event_1.png' }));
     await page.goto('/events/1/pairings');
     const header = page.locator('.pairings-header');
@@ -17,8 +17,8 @@ test.describe('Pairings Display — background display', () => {
 
 test.describe('Pairings Display — active round', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEventPairings(page, 1, makePairingsDto());
   });
 
@@ -44,8 +44,8 @@ test.describe('Pairings Display — active round', () => {
 
 test.describe('Pairings Display — no active round', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEventPairings(page, 1, makePairingsDto({ currentRound: null, pods: [] }));
   });
 
@@ -62,8 +62,8 @@ test.describe('Pairings Display — no active round', () => {
 
 test.describe('Pairings Display — game result', () => {
   test('shows winner badge and Done status when game is completed', async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     const pairings = makePairingsDto();
     pairings.pods[0].gameStatus = 'Completed';
     pairings.pods[0].winnerPlayerId = 1;
@@ -76,8 +76,8 @@ test.describe('Pairings Display — game result', () => {
   });
 
   test('shows Draw badge when game is a draw', async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     const pairings = makePairingsDto();
     pairings.pods[0].gameStatus = 'Draw';
     pairings.pods[0].winnerPlayerId = null;
@@ -91,8 +91,8 @@ test.describe('Pairings Display — game result', () => {
 
 test.describe('Pairings Display — commander names', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetEventPairings(page, 1, makePairingsDto());
   });
 

@@ -20,8 +20,8 @@ import {
 
 test.describe('Cross-store access — StoreEmployee redirected from foreign store', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetThemes(page, []);
     await mockGetStores(page, [
       makeStoreDto({ id: 1, storeName: 'Own Store' }),
@@ -32,7 +32,7 @@ test.describe('Cross-store access — StoreEmployee redirected from foreign stor
       if (route.request().method() === 'GET') {
         route.fulfill({ status: 403, body: 'Forbidden' });
       } else {
-        route.continue();
+        route.fallback();
       }
     });
   });
@@ -53,8 +53,8 @@ test.describe('Cross-store access — StoreEmployee redirected from foreign stor
 
 test.describe('Cross-store access — StoreEmployee can load own store', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
     await mockGetThemes(page, []);
   });
 

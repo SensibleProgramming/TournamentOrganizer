@@ -9,10 +9,12 @@ import {
   mockGetEvent,
   mockGetEventPlayers,
   mockGetEvents,
+  mockGetStoreAnalytics,
   makeStoreDetailDto,
   makeStoreDto,
   makeEventDto,
   makeEventPlayerDto,
+  makeStoreAnalyticsDto,
 } from '../helpers/api-mock';
 
 // ─── Administrator Role: Global Access E2E Tests ──────────────────────────────
@@ -28,8 +30,8 @@ const STORE_B = makeStoreDetailDto({ id: 2, storeName: 'Beta Game Shop' });
 
 test.describe('Admin — store list: navigate to any store', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [
       makeStoreDto({ id: 1, storeName: 'Alpha Game Shop' }),
       makeStoreDto({ id: 2, storeName: 'Beta Game Shop' }),
@@ -52,11 +54,13 @@ test.describe('Admin — store list: navigate to any store', () => {
 
 test.describe('Admin — store detail: can edit any store settings', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
+    await mockGetStores(page, []);
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE_A);
     await mockGetEmployees(page, 1, []);
+    await mockGetStoreAnalytics(page, 1, makeStoreAnalyticsDto());
     await page.goto('/stores/1');
   });
 
@@ -74,13 +78,15 @@ test.describe('Admin — store detail: can edit any store settings', () => {
 
 test.describe('Admin — store detail: Employees tab visible for any store', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
+    await mockGetStores(page, []);
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE_B);
     await mockGetEmployees(page, 2, [
       { id: 10, name: 'Charlie Staff', email: 'charlie@beta.com', role: 'StoreEmployee' },
     ]);
+    await mockGetStoreAnalytics(page, 2, makeStoreAnalyticsDto());
     await page.goto('/stores/2');
   });
 
@@ -104,8 +110,8 @@ const ALICE = makeEventPlayerDto({ playerId: 1, name: 'Alice', isCheckedIn: fals
 
 test.describe('Admin — event detail: has store employee management controls', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, []);
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, [ALICE]);

@@ -18,8 +18,8 @@ const STORE_ID = 1;
 
 test.describe('Commander Meta — table', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetCommanderMeta(page, STORE_ID, '30d', makeCommanderMetaReportDto({
       topCommanders: [makeCommanderMetaEntryDto({ commanderName: 'Atraxa', timesPlayed: 8, wins: 4, winRate: 50, avgFinish: 2.1 })],
     }));
@@ -43,8 +43,8 @@ test.describe('Commander Meta — table', () => {
 
 test.describe('Commander Meta — empty', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetCommanderMeta(page, STORE_ID, '30d', makeCommanderMetaReportDto({ topCommanders: [] }));
     await page.goto(`/stores/${STORE_ID}/meta`);
   });
@@ -58,8 +58,8 @@ test.describe('Commander Meta — empty', () => {
 
 test.describe('Commander Meta — multiple commanders', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetCommanderMeta(page, STORE_ID, '30d', makeCommanderMetaReportDto({
       topCommanders: [
         makeCommanderMetaEntryDto({ commanderName: 'Atraxa',  timesPlayed: 8, wins: 4, winRate: 50,   avgFinish: 2.1 }),
@@ -85,8 +85,8 @@ test.describe('Commander Meta — multiple commanders', () => {
 
 test.describe('Commander Meta — period toggle', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
     await mockGetCommanderMeta(page, STORE_ID, '30d', makeCommanderMetaReportDto({
       topCommanders: [makeCommanderMetaEntryDto({ commanderName: 'Atraxa' })],
     }));

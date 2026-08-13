@@ -4,8 +4,8 @@ import { mockGetStores, mockGetStoreGroups, mockCreateStoreGroup, mockAssignStor
 
 test.describe('Store Groups — Admin: list', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStoreGroups(page, [makeStoreGroupDto({ id: 1, name: 'Top Deck Chain', storeCount: 2 })]);
     await page.goto('/store-groups');
   });
@@ -22,8 +22,8 @@ test.describe('Store Groups — Admin: list', () => {
 test.describe('Store Groups — Admin: create', () => {
   test.beforeEach(async ({ page }) => {
     const newGroup = makeStoreGroupDto({ id: 2, name: 'New Group', storeCount: 0 });
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStoreGroups(page, []);
     await mockCreateStoreGroup(page, newGroup);
     await page.goto('/store-groups');
@@ -44,8 +44,8 @@ test.describe('Store Groups — Admin: create', () => {
 
 test.describe('Store Groups — Admin: assign store', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStoreGroups(page, [makeStoreGroupDto({ id: 1, name: 'Top Deck Chain', storeCount: 0 })]);
     await mockGetStores(page, [makeStoreDto({ id: 5, storeName: 'Solo Shop', storeGroupId: null } as any)]);
     await mockAssignStore(page, 1, 5);

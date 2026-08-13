@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { NotificationBellComponent } from './notification-bell.component';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -36,7 +36,7 @@ describe('NotificationBellComponent', () => {
     markNotificationRead: jest.Mock;
     markAllNotificationsRead: jest.Mock;
   };
-  let mockAuthService: { currentUser: CurrentUser | null; isTier2: boolean };
+  let mockAuthService: { currentUser: CurrentUser | null; isTier2: boolean; currentUser$: Observable<CurrentUser | null> };
 
   function setup(user: CurrentUser | null = MOCK_USER, isTier2 = true) {
     mockApiService = {
@@ -45,7 +45,7 @@ describe('NotificationBellComponent', () => {
       markNotificationRead: jest.fn().mockReturnValue(of(undefined)),
       markAllNotificationsRead: jest.fn().mockReturnValue(of(undefined)),
     };
-    mockAuthService = { currentUser: user, isTier2 };
+    mockAuthService = { currentUser: user, isTier2, currentUser$: of(user) };
 
     return TestBed.configureTestingModule({
       imports: [NotificationBellComponent],
@@ -83,7 +83,7 @@ describe('NotificationBellComponent', () => {
       markNotificationRead: jest.fn().mockReturnValue(of(undefined)),
       markAllNotificationsRead: jest.fn().mockReturnValue(of(undefined)),
     };
-    mockAuthService = { currentUser: MOCK_USER, isTier2: true };
+    mockAuthService = { currentUser: MOCK_USER, isTier2: true, currentUser$: of(MOCK_USER) };
 
     await TestBed.configureTestingModule({
       imports: [NotificationBellComponent],
@@ -111,7 +111,7 @@ describe('NotificationBellComponent', () => {
       markNotificationRead: jest.fn().mockReturnValue(of(undefined)),
       markAllNotificationsRead: jest.fn().mockReturnValue(of(undefined)),
     };
-    mockAuthService = { currentUser: MOCK_USER, isTier2: true };
+    mockAuthService = { currentUser: MOCK_USER, isTier2: true, currentUser$: of(MOCK_USER) };
 
     await TestBed.configureTestingModule({
       imports: [NotificationBellComponent],

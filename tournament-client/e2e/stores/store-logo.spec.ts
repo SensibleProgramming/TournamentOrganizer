@@ -36,8 +36,8 @@ const STORE_NO_LOGO = makeStoreDetailDto({
 
 test.describe('Store logo — toolbar display', () => {
   test('toolbar shows store-logo-thumb after selecting a store with a logo', async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [makeStoreDto({ id: STORE_ID, storeName: 'Logo Test Shop', logoUrl: OLD_LOGO })]);
     await mockGetStore(page, STORE_WITH_LOGO);
     await mockGetThemes(page, []);
@@ -53,8 +53,8 @@ test.describe('Store logo — toolbar display', () => {
   });
 
   test('toolbar shows placeholder icon when selected store has no logo', async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [makeStoreDto({ id: STORE_ID, storeName: 'Logo Test Shop' })]);
     await mockGetStore(page, STORE_NO_LOGO);
     await mockGetThemes(page, []);
@@ -72,8 +72,8 @@ test.describe('Store logo — toolbar display', () => {
 
 test.describe('Store logo — upload refreshes store-detail image', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await mockGetStores(page, [makeStoreDto({ id: STORE_ID, storeName: 'Logo Test Shop' })]);
     await mockGetStore(page, STORE_WITH_LOGO);
     await mockGetThemes(page, []);
@@ -106,8 +106,8 @@ test.describe('Store logo — upload refreshes store-detail image', () => {
 
 test.describe('Store logo — upload refreshes toolbar thumbnail', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Administrator');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Administrator');
     await mockGetStores(page, [makeStoreDto({ id: STORE_ID, storeName: 'Logo Test Shop', logoUrl: OLD_LOGO })]);
     await mockGetStore(page, STORE_WITH_LOGO);
     await mockGetThemes(page, []);
@@ -139,19 +139,22 @@ test.describe('Store logo — upload refreshes toolbar thumbnail', () => {
 
 test.describe('Store logo — persists after Save Settings', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await mockGetStores(page, [makeStoreDto({ id: STORE_ID, storeName: 'Logo Test Shop', logoUrl: OLD_LOGO })]);
     await mockGetStore(page, STORE_WITH_LOGO);
     await mockGetThemes(page, []);
     await mockUploadStoreLogo(page, STORE_ID, makeStoreDto({ id: STORE_ID, storeName: 'Logo Test Shop', logoUrl: NEW_LOGO }));
 
-    // updateStore returns the store with the logo still set
+    // updateStore returns the store with the logo still set.
+    // Use route.fallback() (not continue()) so GET requests correctly chain
+    // to the mockGetStore handler registered above on the same URL pattern —
+    // continue() would send them straight to the network instead.
     await page.route(`**/api/stores/${STORE_ID}`, route => {
       if (route.request().method() === 'PUT') {
         route.fulfill({ json: makeStoreDetailDto({ id: STORE_ID, storeName: 'Logo Test Shop', logoUrl: NEW_LOGO }) });
       } else {
-        route.continue();
+        route.fallback();
       }
     });
 

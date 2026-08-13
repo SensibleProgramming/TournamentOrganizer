@@ -26,7 +26,7 @@ export class AuthService {
       {},
       { withCredentials: true }
     ).subscribe({
-      next: res => { this.setToken(res.token); this.authReadySubject.next(true); },
+      next: res => { if (res?.token) { this.setToken(res.token); } this.authReadySubject.next(true); },
       error: () => { this.authReadySubject.next(true); } // no active session — remain unauthenticated
     });
   }

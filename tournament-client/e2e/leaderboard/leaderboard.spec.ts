@@ -19,8 +19,8 @@ const BOB_ENTRY   = makeLeaderboardEntry({ rank: 2, playerId: 2, name: 'Bob',   
 
 test.describe('Leaderboard — heading', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetLeaderboard(page, []);
     await page.goto('/leaderboard');
   });
@@ -34,8 +34,8 @@ test.describe('Leaderboard — heading', () => {
 
 test.describe('Leaderboard — empty state (API online)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetLeaderboard(page, []);
     await page.goto('/leaderboard');
   });
@@ -53,8 +53,8 @@ test.describe('Leaderboard — empty state (API online)', () => {
 
 test.describe('Leaderboard — online, populated', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await loginAs(page, 'Player');
     await mockGetLeaderboard(page, [ALICE_ENTRY, BOB_ENTRY]);
     await page.goto('/leaderboard');
   });
@@ -83,13 +83,13 @@ test.describe('Leaderboard — offline, ranked cache present', () => {
   ];
 
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'Player');
     // Seed localStorage before Angular boots. Player role → storePrefix = 'to_store_0'
     await page.addInitScript((players) => {
       localStorage.setItem('to_store_0_players', JSON.stringify(players));
       localStorage.setItem('to_store_0_players_meta', JSON.stringify([]));
     }, CACHED);
-    await stubUnmatchedApi(page);
     await page.route('**/api/leaderboard', route => route.fulfill({ status: 503 }));
     await page.goto('/leaderboard');
   });
@@ -116,6 +116,7 @@ test.describe('Leaderboard — offline, ranked cache present', () => {
 
 test.describe('Leaderboard — offline, no ranked cache', () => {
   test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
     await loginAs(page, 'Player');
     await page.addInitScript(() => {
       const unranked = [{
@@ -126,7 +127,6 @@ test.describe('Leaderboard — offline, no ranked cache', () => {
       localStorage.setItem('to_store_0_players', JSON.stringify(unranked));
       localStorage.setItem('to_store_0_players_meta', JSON.stringify([]));
     });
-    await stubUnmatchedApi(page);
     await page.route('**/api/leaderboard', route => route.fulfill({ status: 503 }));
     await page.goto('/leaderboard');
   });
