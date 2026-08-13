@@ -1,0 +1,9 @@
+[build]
+  base = "tournament-client"
+  command = "npm ci --legacy-peer-deps && npm run build"
+  publish = "dist/tournament-client/browser"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
