@@ -1,10 +1,16 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { offlineRedirectGuard } from './core/guards/offline-redirect.guard';
 
 export const routes: Routes = [
-  { path: '', loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent) },
+  {
+    path: '',
+    canActivate: [offlineRedirectGuard],
+    loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent)
+  },
   {
     path: 'login',
+    canActivate: [offlineRedirectGuard],
     loadComponent: () => import('./features/auth/login.component').then(m => m.LoginComponent)
   },
   {

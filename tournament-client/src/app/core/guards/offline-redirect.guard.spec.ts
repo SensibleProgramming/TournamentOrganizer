@@ -1,19 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { BehaviorSubject, firstValueFrom, Observable } from 'rxjs';
-import { authGuard } from './auth.guard';
+import { offlineRedirectGuard } from './offline-redirect.guard';
 import { AuthService } from '../services/auth.service';
 import { NetworkStatusService } from '../services/network-status.service';
 
-describe('authGuard', () => {
+describe('offlineRedirectGuard', () => {
   let authReadySubject: BehaviorSubject<boolean>;
-  let mockAuth: { authReady$: Observable<boolean>; getToken: jest.Mock };
+  let mockAuth: { authReady$: Observable<boolean> };
   let mockNetwork: { degraded: boolean };
   let mockRouter: { navigate: jest.Mock };
 
   beforeEach(() => {
     authReadySubject = new BehaviorSubject<boolean>(false);
-    mockAuth = { authReady$: authReadySubject.asObservable(), getToken: jest.fn() };
+    mockAuth = { authReady$: authReadySubject.asObservable() };
     mockNetwork = { degraded: false };
     mockRouter = { navigate: jest.fn() };
 
@@ -28,20 +28,18 @@ describe('authGuard', () => {
 
   function runGuard(): Observable<boolean> {
     return TestBed.runInInjectionContext(() =>
-      authGuard({} as any, { url: '/events/1' } as any)
+      offlineRedirectGuard({} as any, {} as any)
     ) as Observable<boolean>;
   }
 
   it('does not decide while authReady$ is still false', () => {
-    mockAuth.getToken.mockReturnValue('valid-token');
     let emitted = false;
     runGuard().subscribe(() => { emitted = true; });
     expect(emitted).toBe(false);
     expect(mockRouter.navigate).not.toHaveBeenCalled();
   });
 
-  it('allows navigation once ready and a token exists', async () => {
-    mockAuth.getToken.mockReturnValue('valid-token');
+  it('allows activation once ready and backend is reachable', async () => {
     const promise = firstValueFrom(runGuard());
     authReadySubject.next(true);
     const result = await promise;
@@ -49,24 +47,7 @@ describe('authGuard', () => {
     expect(mockRouter.navigate).not.toHaveBeenCalled();
   });
 
-  it('redirects to /login with returnUrl once ready and no token', async () => {
-    mockAuth.getToken.mockReturnValue(null);
-    const promise = firstValueFrom(runGuard());
-    authReadySubject.next(true);
-    const result = await promise;
-    expect(result).toBe(false);
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/events/1' } });
-  });
-
-  it('decides immediately when authReady$ is already true (subsequent navigations)', async () => {
-    authReadySubject.next(true);
-    mockAuth.getToken.mockReturnValue('valid-token');
-    const result = await firstValueFrom(runGuard());
-    expect(result).toBe(true);
-  });
-
-  it('redirects to /events (no returnUrl) when ready, no token, and backend is degraded', async () => {
-    mockAuth.getToken.mockReturnValue(null);
+  it('redirects to /events once ready and backend is degraded', async () => {
     mockNetwork.degraded = true;
     const promise = firstValueFrom(runGuard());
     authReadySubject.next(true);
@@ -75,13 +56,9 @@ describe('authGuard', () => {
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/events']);
   });
 
-  it('still allows navigation when degraded but a valid token exists', async () => {
-    mockAuth.getToken.mockReturnValue('valid-token');
-    mockNetwork.degraded = true;
-    const promise = firstValueFrom(runGuard());
+  it('decides immediately when authReady$ is already true (subsequent navigations)', async () => {
     authReadySubject.next(true);
-    const result = await promise;
+    const result = await firstValueFrom(runGuard());
     expect(result).toBe(true);
-    expect(mockRouter.navigate).not.toHaveBeenCalled();
   });
 });

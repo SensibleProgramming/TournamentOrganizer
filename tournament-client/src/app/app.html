@@ -5,23 +5,25 @@
       <span>Commander Tournament</span>
     </div> -->
     <mat-nav-list>
-      <a mat-list-item routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">
-        <mat-icon matListItemIcon>home</mat-icon>
-        <span matListItemTitle>Home</span>
-      </a>
-      <a mat-list-item routerLink="/leaderboard" routerLinkActive="active">
-        <mat-icon matListItemIcon>leaderboard</mat-icon>
-        <span matListItemTitle>Leaderboard</span>
-      </a>
-      <a mat-list-item routerLink="/players" routerLinkActive="active">
-        <mat-icon matListItemIcon>people</mat-icon>
-        <span matListItemTitle>Players</span>
-      </a>
+      @if (!degraded) {
+        <a mat-list-item routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">
+          <mat-icon matListItemIcon>home</mat-icon>
+          <span matListItemTitle>Home</span>
+        </a>
+        <a mat-list-item routerLink="/leaderboard" routerLinkActive="active">
+          <mat-icon matListItemIcon>leaderboard</mat-icon>
+          <span matListItemTitle>Leaderboard</span>
+        </a>
+        <a mat-list-item routerLink="/players" routerLinkActive="active">
+          <mat-icon matListItemIcon>people</mat-icon>
+          <span matListItemTitle>Players</span>
+        </a>
+      }
       <a mat-list-item routerLink="/events" routerLinkActive="active">
         <mat-icon matListItemIcon>event</mat-icon>
         <span matListItemTitle>Events</span>
       </a>
-      @if (isStoreEmployee) {
+      @if (isStoreEmployee && !degraded) {
         <a mat-list-item routerLink="/stores" routerLinkActive="active">
           <mat-icon matListItemIcon>store</mat-icon>
           <span matListItemTitle>Stores</span>
@@ -63,7 +65,7 @@
             <span>Logout</span>
           </button>
         </mat-menu>
-      } @else {
+      } @else if (!degraded) {
         <button mat-button (click)="login()">
           <mat-icon>login</mat-icon>
           Login with Google

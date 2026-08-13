@@ -1,0 +1,194 @@
+import { test, expect } from '@playwright/test';
+import { loginAs } from '../helpers/auth';
+import {
+  stubUnmatchedApi,
+  mockGetEvents,
+  mockGetLeaderboard,
+  mockGetStores,
+  mockGetEvent,
+  mockGetEventPlayers,
+  makeEventDto,
+  makeEventPlayerDto,
+} from '../helpers/api-mock';
+import { Page } from '@playwright/test';
+
+// ─── Offline / degraded-mode UI hardening ─────────────────────────────────────
+//
+// Simulates a deployed frontend with no reachable backend: every /api/** call
+// fails with a 404 (the same static-host fallback shape isBackendUnreachable()
+// treats as "backend absent"). No stubUnmatchedApi 200 catch-all is registered
+// in these tests — every request must fail for the app to settle into degraded
+// mode on cold load, mirroring a real no-backend deploy.
+
+async function mockBackendUnreachable(page: Page): Promise<void> {
+  await page.route('**/api/**', route => route.fulfill({ status: 404, json: {} }));
+}
+
+const EVENT_ID = 1;
+const STORE_ID = 1;
+
+// ── Home / Login unreachable when degraded ─────────────────────────────────────
+
+test.describe('Home and Login redirect to /events when backend is unreachable', () => {
+  test('root route redirects to /events', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/events$/);
+  });
+
+  test('/login redirects to /events', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto('/login');
+    await expect(page).toHaveURL(/\/events$/);
+  });
+
+  test('root route still shows Landing when backend is reachable', async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetEvents(page, []);
+    await mockGetLeaderboard(page, []);
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/$|\/\?/);
+  });
+});
+
+// ── Side nav + toolbar gating ───────────────────────────────────────────────────
+
+test.describe('Side nav and toolbar when degraded', () => {
+  test('nav shows only Events; Home/Leaderboard/Players/Stores are hidden', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto('/events');
+    await expect(page.locator('a[routerLink="/events"]')).toBeVisible();
+    await expect(page.locator('a[routerLink="/"]')).toHaveCount(0);
+    await expect(page.locator('a[routerLink="/leaderboard"]')).toHaveCount(0);
+    await expect(page.locator('a[routerLink="/players"]')).toHaveCount(0);
+    await expect(page.locator('a[routerLink="/stores"]')).toHaveCount(0);
+  });
+
+  test('toolbar shows no Login button', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto('/events');
+    await expect(page.getByRole('button', { name: 'Login with Google' })).toHaveCount(0);
+  });
+
+  test('nav shows all links and the Login button when backend is reachable', async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetEvents(page, []);
+    await page.goto('/events');
+    await expect(page.locator('a[routerLink="/"]')).toBeVisible();
+    await expect(page.locator('a[routerLink="/leaderboard"]')).toBeVisible();
+    await expect(page.locator('a[routerLink="/players"]')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Login with Google' })).toBeVisible();
+  });
+});
+
+// ── authGuard redirect target when degraded ─────────────────────────────────────
+
+test.describe('authGuard redirects to /events (not /login) when degraded and unauthenticated', () => {
+  test('navigating to a protected event-detail route bounces to /events', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto(`/events/${EVENT_ID}`);
+    await expect(page).toHaveURL(/\/events$/);
+  });
+
+  test('navigating to a protected stores route bounces to /events', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto('/stores');
+    await expect(page).toHaveURL(/\/events$/);
+  });
+});
+
+// ── Create Event — open to anyone offline ───────────────────────────────────────
+
+test.describe('Create Event is available offline with no login', () => {
+  test('Create New Event card is visible for an anonymous visitor', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto('/events');
+    await expect(page.getByText('Create New Event')).toBeVisible();
+  });
+
+  test('Create button enables once name and date are filled, with no store/role required', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto('/events');
+    await page.getByLabel('Event Name').fill('Offline Draft Night');
+    await page.getByLabel('Date').fill('3/15/2026');
+    const createBtn = page.getByRole('button', { name: 'Create Event' });
+    await expect(createBtn).toBeEnabled();
+  });
+});
+
+// ── Event Detail — no-fallback actions hidden while degraded ───────────────────
+//
+// Authenticated (valid token from /api/auth/refresh) so authGuard passes and the
+// event loads normally, but GET /api/stores — an unrelated call app.ts fires for
+// every store-employee/admin session — is forced to 404, flipping the app into
+// degraded mode without breaking the event-detail page itself.
+//
+// networkStatusInterceptor is deliberately "self-healing": ANY successful /api/**
+// response calls reportReachable() and clears the degraded flag, even one from an
+// endpoint unrelated to the earlier failure (see network-status.interceptor.spec.ts
+// — "reports reachable on a successful /api/** response"). Since event-detail fires
+// several concurrent requests on load, the one that resolves *last* determines the
+// final degraded state. A short delay on the forced-404 route ensures it resolves
+// after the page's other (successful) mocked calls, so degraded reliably ends true.
+
+test.describe('Event Detail — actions with no offline fallback are hidden when degraded', () => {
+  test('Registration-status event: Pairings, Background upload, Bulk Register, and Edit-commander are hidden', async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await page.route('**/api/stores', async route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await route.fulfill({ status: 404, json: {} });
+    });
+    await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'Registration', playerCount: 1, storeId: STORE_ID }));
+    await mockGetEventPlayers(page, EVENT_ID, [makeEventPlayerDto({ playerId: 1, name: 'Alice' })]);
+    await page.goto(`/events/${EVENT_ID}`);
+
+    await expect(page.getByRole('link', { name: 'Pairings' })).toHaveCount(0);
+    await expect(page.locator('.upload-background-btn')).toHaveCount(0);
+    await expect(page.locator('.bulk-register-section')).toHaveCount(0);
+    await expect(page.locator('.edit-commander-btn')).toHaveCount(0);
+  });
+
+  test('InProgress-status event: Un-drop and Promote are hidden for the store employee', async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await page.route('**/api/stores', async route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await route.fulfill({ status: 404, json: {} });
+    });
+    await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'InProgress', playerCount: 2, storeId: STORE_ID }));
+    await mockGetEventPlayers(page, EVENT_ID, [
+      makeEventPlayerDto({ playerId: 1, name: 'Alice', isDropped: true }),
+      makeEventPlayerDto({ playerId: 2, name: 'Bob', isWaitlisted: true, waitlistPosition: 1 }),
+    ]);
+    await page.goto(`/events/${EVENT_ID}`);
+
+    await expect(page.getByRole('button', { name: 'Un-drop' })).toHaveCount(0);
+    await page.getByRole('tab', { name: /Waitlist/ }).click();
+    await expect(page.getByRole('button', { name: 'Promote' })).toHaveCount(0);
+  });
+
+  test('InProgress-status event: Withdraw is hidden for the self-registered player', async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await loginAs(page, 'Player', { playerId: 1 });
+    // A plain Player session (no storeId) never triggers app.ts's GET /api/stores call, so
+    // that endpoint can't be used to force degraded mode here (unlike the store-employee
+    // tests above). Instead, 404 the GET /api/events/:id/rounds call that event-detail
+    // itself fires unconditionally in ngOnInit — event.service.ts swallows rounds load
+    // errors via catchError(() => EMPTY), so this doesn't break the rest of the page.
+    await page.route(`**/api/events/${EVENT_ID}/rounds`, async route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await route.fulfill({ status: 404, json: {} });
+    });
+    await mockGetEvent(page, makeEventDto({ id: EVENT_ID, status: 'InProgress', playerCount: 1, storeId: STORE_ID }));
+    await mockGetEventPlayers(page, EVENT_ID, [
+      makeEventPlayerDto({ playerId: 1, name: 'Alice', isDropped: false }),
+    ]);
+    await page.goto(`/events/${EVENT_ID}`);
+
+    await expect(page.getByRole('button', { name: 'Withdraw' })).toHaveCount(0);
+  });
+});

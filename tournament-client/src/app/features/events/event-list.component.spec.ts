@@ -8,6 +8,7 @@ import { EventService } from '../../core/services/event.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StoreContextService } from '../../core/services/store-context.service';
 import { SyncService } from '../../core/services/sync.service';
+import { NetworkStatusService } from '../../core/services/network-status.service';
 import { EventDto } from '../../core/models/api.models';
 
 describe('EventListComponent (smoke)', () => {
@@ -137,6 +138,58 @@ describe('EventListComponent — Create New Event visibility (Admin)', () => {
     const fixture = TestBed.createComponent(EventListComponent);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('Create New Event');
+  });
+});
+
+// ── Create New Event visibility — degraded backend ──────────────────────────────
+
+describe('EventListComponent — Create New Event visibility (degraded backend)', () => {
+  const eventsSubject = new BehaviorSubject<EventDto[]>([]);
+  const selectedStoreId$ = new Subject<number | null>();
+
+  const mockEventService: Partial<EventService> = {
+    events$: eventsSubject.asObservable(),
+    loadAllEvents: jest.fn(),
+    createEvent: jest.fn().mockReturnValue(of(null)),
+    removeEvent: jest.fn().mockReturnValue(of(null)),
+  };
+
+  const mockSnackBar = { open: jest.fn() };
+  // No login, no role — proves the offline bypass doesn't depend on auth state at all.
+  const mockAuthService = { isStoreEmployee: false, isAdmin: false, currentUser: null };
+  const mockStoreContext = { selectedStoreId: null, selectedStoreId$: selectedStoreId$.asObservable() };
+  const mockNetworkStatus = { degraded: true };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [EventListComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: EventService,        useValue: mockEventService },
+        { provide: MatSnackBar,         useValue: mockSnackBar },
+        { provide: AuthService,         useValue: mockAuthService },
+        { provide: StoreContextService, useValue: mockStoreContext },
+        { provide: NetworkStatusService, useValue: mockNetworkStatus },
+      ],
+    }).compileComponents();
+  });
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('shows the Create New Event section for an anonymous, roleless visitor when degraded', () => {
+    const fixture = TestBed.createComponent(EventListComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Create New Event');
+  });
+
+  it('enables the Create button once name/date are filled, ignoring the admin/store-selected clause', () => {
+    const fixture = TestBed.createComponent(EventListComponent);
+    fixture.componentInstance.newName = 'Offline Draft Night';
+    fixture.componentInstance.newDate = new Date();
+    fixture.detectChanges();
+    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button[color="primary"]');
+    expect(btn?.disabled).toBe(false);
   });
 });
 

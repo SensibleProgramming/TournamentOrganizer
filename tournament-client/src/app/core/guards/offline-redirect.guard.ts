@@ -4,7 +4,8 @@ import { filter, map, take } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { NetworkStatusService } from '../services/network-status.service';
 
-export const authGuard: CanActivateFn = (route, state) => {
+/** Keeps Home and Login unreachable while the backend is degraded — there's nothing to fetch or authenticate against. */
+export const offlineRedirectGuard: CanActivateFn = () => {
   const auth    = inject(AuthService);
   const network = inject(NetworkStatusService);
   const router  = inject(Router);
@@ -13,14 +14,11 @@ export const authGuard: CanActivateFn = (route, state) => {
     filter(ready => ready),
     take(1),
     map(() => {
-      if (auth.getToken()) return true;
-      // Offline and unauthenticated — /login is a dead end with no backend to verify against.
       if (network.degraded) {
         router.navigate(['/events']);
-      } else {
-        router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
+        return false;
       }
-      return false;
+      return true;
     })
   );
 };
