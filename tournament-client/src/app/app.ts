@@ -21,6 +21,7 @@ import { ThemeService } from './core/services/theme.service';
 import { CurrentUser, StoreDto } from './core/models/api.models';
 import { PwaInstallPromptComponent } from './shared/components/pwa-install-prompt.component';
 import { NotificationBellComponent } from './shared/components/notification-bell.component';
+import { OfflineBannerComponent } from './shared/components/offline-banner.component';
 
 @Component({
   selector: 'app-root',
@@ -31,6 +32,7 @@ import { NotificationBellComponent } from './shared/components/notification-bell
     MatSelectModule, MatFormFieldModule, MatSnackBarModule,
     PwaInstallPromptComponent,
     NotificationBellComponent,
+    OfflineBannerComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'

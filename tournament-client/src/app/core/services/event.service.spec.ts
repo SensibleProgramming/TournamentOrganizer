@@ -371,6 +371,53 @@ describe('EventService', () => {
         expect(evt?.playerCount).toBe(3);
       });
     });
+
+    describe('offline path (absent backend — HTTP 404) — positive event ID', () => {
+      beforeEach(() => {
+        // Simulate a static host with no backend deployed at all: /api/** resolves
+        // to a plain 404 rather than ERR_CONNECTION_REFUSED. Must degrade gracefully
+        // the same way a network-unreachable error does.
+        mockApi.registerForEvent.mockReturnValue(throwError(() => ({ status: 404 })));
+        mockCtx.players.getById.mockReturnValue(playerStub);
+        mockCtx.events.getById.mockReturnValue({ ...eventStub, id: 1, playerCount: 2 });
+      });
+
+      it('completes without throwing', async () => {
+        await expect(firstValueFrom(service.registerPlayer(1, dto))).resolves.not.toThrow();
+      });
+
+      it('adds the player to eventPlayers$ from local cache', async () => {
+        await firstValueFrom(service.registerPlayer(1, dto));
+        const players = await firstValueFrom(service.eventPlayers$);
+        expect(players.some(p => p.playerId === 42)).toBe(true);
+      });
+
+      it('increments the event playerCount in ctx', async () => {
+        await firstValueFrom(service.registerPlayer(1, dto));
+        expect(mockCtx.events.update).toHaveBeenCalledWith(
+          expect.objectContaining({ playerCount: 3 })
+        );
+      });
+    });
+
+    describe('online path — real 4xx from a live API', () => {
+      beforeEach(() => {
+        mockApi.registerForEvent.mockReturnValue(
+          throwError(() => ({ status: 409, error: { error: 'Already registered' } }))
+        );
+        mockCtx.players.getById.mockReturnValue(playerStub);
+        mockCtx.events.getById.mockReturnValue({ ...eventStub, id: 1, playerCount: 2 });
+      });
+
+      it('rethrows the error instead of falling back locally', async () => {
+        await expect(firstValueFrom(service.registerPlayer(1, dto))).rejects.toMatchObject({ status: 409 });
+      });
+
+      it('does not apply the registration locally', async () => {
+        await expect(firstValueFrom(service.registerPlayer(1, dto))).rejects.toBeDefined();
+        expect(mockCtx.events.update).not.toHaveBeenCalled();
+      });
+    });
   });
 
   // ── clearAllPlayers ───────────────────────────────────────────────────────
