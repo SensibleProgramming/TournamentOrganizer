@@ -6,6 +6,7 @@ import { ApiService } from './api.service';
 import { LocalStorageContext } from './local-storage-context.service';
 import { StorageAdapter } from './storage-adapter.service';
 import { StoreContextService } from './store-context.service';
+import { isBackendUnreachable } from '../utils/network-error.util';
 import {
   EventDto, RoundDto, PodDto, StandingsEntry, CreateEventDto,
   GameResultSubmit, EventPlayerDto, RegisterPlayerDto
@@ -206,9 +207,10 @@ export class EventService {
       tap(() => applyLocally()),
       map((): void => {}),
       catchError((err) => {
-        // Only fall back to local when the API is genuinely unreachable (no HTTP status).
-        // HTTP 4xx/5xx from a running API must surface to the caller so the UI shows the error.
-        if (err?.status != null) return throwError(() => err);
+        // Fall back to local when the backend is absent (no status, status 0, or a
+        // static-host 404 for the /api/** route). Real 4xx/5xx from a live API
+        // (validation, auth, conflict, server errors) still rethrow.
+        if (!isBackendUnreachable(err)) return throwError(() => err);
         applyLocally();
         return of<void>(undefined);
       })

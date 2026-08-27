@@ -23,6 +23,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ScryfallService } from '../../core/services/scryfall.service';
 import { ApiService } from '../../core/services/api.service';
+import { NetworkStatusService } from '../../core/services/network-status.service';
 import {
   EventDto, RoundDto, StandingsEntry, EventPlayerDto, PlayerDto, POINT_SYSTEM_LABELS,
 } from '../../core/models/api.models';
@@ -107,15 +108,17 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                   <mat-icon>delete</mat-icon> Remove
                 </button>
               }
-              <a mat-stroked-button [routerLink]="['/events', event.id, 'pairings']" target="_blank">
-                <mat-icon>table_chart</mat-icon> Pairings
-              </a>
-              <button mat-stroked-button class="upload-background-btn" (click)="bgInput.click()">
-                <mat-icon>wallpaper</mat-icon>
-                {{ event.backgroundImageUrl ? 'Change Background' : 'Upload Background' }}
-              </button>
-              <input #bgInput type="file" accept=".png,.jpg,.jpeg" style="display:none"
-                     (change)="onBackgroundSelected($event)">
+              @if (!networkStatus.degraded) {
+                <a mat-stroked-button [routerLink]="['/events', event.id, 'pairings']" target="_blank">
+                  <mat-icon>table_chart</mat-icon> Pairings
+                </a>
+                <button mat-stroked-button class="upload-background-btn" (click)="bgInput.click()">
+                  <mat-icon>wallpaper</mat-icon>
+                  {{ event.backgroundImageUrl ? 'Change Background' : 'Upload Background' }}
+                </button>
+                <input #bgInput type="file" accept=".png,.jpg,.jpeg" style="display:none"
+                       (change)="onBackgroundSelected($event)">
+              }
             </div>
           }
         </div>
@@ -210,11 +213,13 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                 }
 
                 <!-- ── Bulk Register ── -->
-                <div class="bulk-register-section">
-                  <button mat-stroked-button (click)="openBulkRegisterDialog()">
-                    <mat-icon>group_add</mat-icon> Bulk Register Players
-                  </button>
-                </div>
+                @if (!networkStatus.degraded) {
+                  <div class="bulk-register-section">
+                    <button mat-stroked-button (click)="openBulkRegisterDialog()">
+                      <mat-icon>group_add</mat-icon> Bulk Register Players
+                    </button>
+                  </div>
+                }
               }
               @if (!authService.isStoreEmployee && authService.currentUser?.playerId && !isAlreadyRegistered(authService.currentUser!.playerId!) && !isEventFull) {
                 <div class="self-register-row">
@@ -314,7 +319,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                             </div>
                           } @else {
                             <span>{{ row.commanders ?? '—' }}</span>
-                            @if (canEditCommander(row)) {
+                            @if (canEditCommander(row) && !networkStatus.degraded) {
                               <button mat-icon-button (click)="startEditCommander(row)" title="Edit commander" class="edit-commander-btn">
                                 <mat-icon>edit</mat-icon>
                               </button>
@@ -345,15 +350,15 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                           @if (authService.isStoreEmployee && !row.isDropped && !row.isDisqualified && event!.status !== 'Completed') {
                             @if (event!.status === 'Registration') {
                               <button mat-button color="warn" (click)="dropPlayer(row.playerId)">Drop</button>
-                            } @else if (event!.status === 'InProgress') {
+                            } @else if (event!.status === 'InProgress' && !networkStatus.degraded) {
                               <button mat-button color="warn" (click)="setDropped(row, true)">Drop</button>
                             }
                             <button mat-button color="warn" (click)="disqualifyPlayer(row.playerId)">DQ</button>
                           }
-                          @if (authService.isStoreEmployee && row.isDropped && event!.status === 'InProgress') {
+                          @if (authService.isStoreEmployee && row.isDropped && event!.status === 'InProgress' && !networkStatus.degraded) {
                             <button mat-button (click)="setDropped(row, false)">Un-drop</button>
                           }
-                          @if (!authService.isStoreEmployee && row.playerId === authService.currentUser?.playerId && !row.isDropped && event!.status === 'InProgress') {
+                          @if (!authService.isStoreEmployee && row.playerId === authService.currentUser?.playerId && !row.isDropped && event!.status === 'InProgress' && !networkStatus.degraded) {
                             <button mat-button color="warn" (click)="setDropped(row, true)">Withdraw</button>
                           }
                         </td>
@@ -382,7 +387,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                         <div class="waitlist-row">
                           <mat-chip>{{ player.waitlistPosition }}</mat-chip>
                           <span>{{ player.name }}</span>
-                          @if (authService.isStoreEmployee) {
+                          @if (authService.isStoreEmployee && !networkStatus.degraded) {
                             <button mat-button color="primary" (click)="promotePlayer(player.playerId)">Promote</button>
                           }
                         </div>
@@ -576,6 +581,7 @@ export class EventDetailComponent implements OnInit {
     private dialog: MatDialog,
     private scryfallService: ScryfallService,
     private apiService: ApiService,
+    public networkStatus: NetworkStatusService,
   ) {}
 
   onBackgroundSelected(event: Event): void {

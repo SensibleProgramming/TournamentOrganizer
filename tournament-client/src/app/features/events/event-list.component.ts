@@ -19,6 +19,7 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StoreContextService } from '../../core/services/store-context.service';
 import { SyncService } from '../../core/services/sync.service';
+import { NetworkStatusService } from '../../core/services/network-status.service';
 import { EventDto, EventTemplateDto, PointSystem, POINT_SYSTEM_LABELS } from '../../core/models/api.models';
 
 @Component({
@@ -79,7 +80,7 @@ import { EventDto, EventTemplateDto, PointSystem, POINT_SYSTEM_LABELS } from '..
               </mat-form-field>
             }
             <button mat-raised-button color="primary" (click)="createEvent()"
-                    [disabled]="!newName || !newDate || (authService.isAdmin && !authService.currentUser?.storeId && !storeContext.selectedStoreId)">
+                    [disabled]="!newName || !newDate || (!networkStatus.degraded && authService.isAdmin && !authService.currentUser?.storeId && !storeContext.selectedStoreId)">
               Create Event
             </button>
           </div>
@@ -162,6 +163,8 @@ export class EventListComponent implements OnInit, OnDestroy {
   private storeChangeSub!: Subscription;
 
   get canCreateEvent(): boolean {
+    // Offline: no backend to verify roles against — creation is local-only, open to anyone.
+    if (this.networkStatus.degraded) return true;
     if (!this.authService.isStoreEmployee) return false;
     if (!this.authService.isAdmin) return true;
     return this.storeContext.selectedStoreId != null;
@@ -197,7 +200,8 @@ export class EventListComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     public authService: AuthService,
     public storeContext: StoreContextService,
-    private syncService: SyncService
+    private syncService: SyncService,
+    public networkStatus: NetworkStatusService
   ) {}
 
   ngOnInit() {

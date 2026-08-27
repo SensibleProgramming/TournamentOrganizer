@@ -18,9 +18,11 @@ import { ApiService } from './core/services/api.service';
 import { StoreContextService } from './core/services/store-context.service';
 import { LocalStorageContext } from './core/services/local-storage-context.service';
 import { ThemeService } from './core/services/theme.service';
+import { NetworkStatusService } from './core/services/network-status.service';
 import { CurrentUser, StoreDto } from './core/models/api.models';
 import { PwaInstallPromptComponent } from './shared/components/pwa-install-prompt.component';
 import { NotificationBellComponent } from './shared/components/notification-bell.component';
+import { OfflineBannerComponent } from './shared/components/offline-banner.component';
 
 @Component({
   selector: 'app-root',
@@ -31,6 +33,7 @@ import { NotificationBellComponent } from './shared/components/notification-bell
     MatSelectModule, MatFormFieldModule, MatSnackBarModule,
     PwaInstallPromptComponent,
     NotificationBellComponent,
+    OfflineBannerComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -44,11 +47,14 @@ export class App implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private swUpdate = inject(SwUpdate);
   private snackBar = inject(MatSnackBar);
+  private networkStatus = inject(NetworkStatusService);
   private userSub!: Subscription;
   private storeNameSub!: Subscription;
+  private degradedSub!: Subscription;
 
   currentUser: CurrentUser | null = null;
   stores: StoreDto[] = [];
+  degraded = false;
   // Fixed per-session timestamp — applied to logo URLs that lack one so the browser
   // re-fetches the image on each app load without thrashing on every getter call.
   private readonly sessionTs = Date.now();
@@ -74,6 +80,11 @@ export class App implements OnInit, OnDestroy {
 
     this.storeNameSub = this.storeContext.storesChanged$.subscribe(() => {
       this.stores = this.ctx.stores.getAll();
+      this.cdr.detectChanges();
+    });
+
+    this.degradedSub = this.networkStatus.degraded$.subscribe(degraded => {
+      this.degraded = degraded;
       this.cdr.detectChanges();
     });
 
@@ -112,6 +123,7 @@ export class App implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.userSub.unsubscribe();
     this.storeNameSub.unsubscribe();
+    this.degradedSub.unsubscribe();
   }
 
   get selectedStore(): StoreDto | null {
