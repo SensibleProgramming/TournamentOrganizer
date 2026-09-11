@@ -4,6 +4,11 @@
   publish = "dist/tournament-client/browser"
 
 [[redirects]]
+  from = "/api/*"
+  to = "/index.html"
+  status = 404
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
