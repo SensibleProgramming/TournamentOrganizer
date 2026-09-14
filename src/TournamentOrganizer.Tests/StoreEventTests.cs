@@ -70,6 +70,8 @@ public class StoreEventTests
         public Task RemoveRegistrationAsync(EventRegistration r) => Task.CompletedTask;
         public Task UpdateRegistrationAsync(EventRegistration r) => Task.CompletedTask;
         public Task<Event?> GetByCheckInTokenAsync(string token) => Task.FromResult<Event?>(null);
+        public Task<Pod?> GetPodWithPlayersAsync(int podId) => throw new NotImplementedException();
+        public Task UpdatePodPlayersAsync(IEnumerable<PodPlayer> podPlayers) => throw new NotImplementedException();
     }
 
     // ── Fake StoreEventRepository ────────────────────────────────────────

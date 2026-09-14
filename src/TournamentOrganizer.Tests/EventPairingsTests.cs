@@ -42,6 +42,8 @@ public class EventPairingsTests
         public Task UpdateRegistrationAsync(EventRegistration r)           => Task.CompletedTask;
         public Task<List<Player>> GetRegisteredPlayersAsync(int eventId)   => Task.FromResult(new List<Player>());
         public Task<Event?> GetByCheckInTokenAsync(string token)           => Task.FromResult<Event?>(null);
+        public Task<Pod?> GetPodWithPlayersAsync(int podId)                => throw new NotImplementedException();
+        public Task UpdatePodPlayersAsync(IEnumerable<PodPlayer> podPlayers) => throw new NotImplementedException();
     }
 
     // ── Stubs ─────────────────────────────────────────────────────────────

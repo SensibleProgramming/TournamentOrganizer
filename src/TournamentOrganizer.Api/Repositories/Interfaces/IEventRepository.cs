@@ -23,4 +23,6 @@ public interface IEventRepository
     Task RemoveRegistrationAsync(EventRegistration registration);
     Task UpdateRegistrationAsync(EventRegistration registration);
     Task<Event?> GetByCheckInTokenAsync(string token);
+    Task<Pod?> GetPodWithPlayersAsync(int podId);
+    Task UpdatePodPlayersAsync(IEnumerable<PodPlayer> podPlayers);
 }

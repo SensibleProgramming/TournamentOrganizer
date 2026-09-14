@@ -22,6 +22,8 @@ public class QrCheckInTests
             Task.FromResult(Events.FirstOrDefault(e => e.Id == id));
         public Task<Event?> GetByCheckInTokenAsync(string token) =>
             Task.FromResult(Events.FirstOrDefault(e => e.CheckInToken == token));
+        public Task<Pod?> GetPodWithPlayersAsync(int podId) => throw new NotImplementedException();
+        public Task UpdatePodPlayersAsync(IEnumerable<PodPlayer> podPlayers) => throw new NotImplementedException();
         public Task<List<EventRegistration>> GetRegistrationsWithPlayersAsync(int eventId) =>
             Task.FromResult(Registrations.Where(r => r.EventId == eventId).ToList());
         public Task UpdateRegistrationAsync(EventRegistration r)

@@ -413,6 +413,59 @@ public class EventService : IEventService
             await RecalculateEventRatingsAsync(eventId);
     }
 
+    public async Task<MovePlayerResultDto> MovePlayerAsync(int sourcePodId, int playerId, int targetPodId)
+    {
+        if (sourcePodId == targetPodId)
+            throw new InvalidOperationException("Source and destination pod must be different.");
+
+        var source = await _eventRepo.GetPodWithPlayersAsync(sourcePodId)
+            ?? throw new InvalidOperationException("Source pod not found.");
+        var target = await _eventRepo.GetPodWithPlayersAsync(targetPodId)
+            ?? throw new InvalidOperationException("Destination pod not found.");
+
+        if (source.RoundId != target.RoundId)
+            throw new InvalidOperationException("Pods must belong to the same round.");
+
+        if (source.Game?.Status != GameStatus.Pending || target.Game?.Status != GameStatus.Pending)
+            throw new InvalidOperationException("Players can only be moved before results are submitted.");
+
+        var moving = source.PodPlayers.FirstOrDefault(pp => pp.PlayerId == playerId)
+            ?? throw new InvalidOperationException("Player is not in the source pod.");
+
+        if (target.PodPlayers.Any(pp => pp.PlayerId == playerId))
+            throw new InvalidOperationException("Player is already in the destination pod.");
+
+        if (source.PodPlayers.Count - 1 < 3)
+            throw new InvalidOperationException("Moving this player would leave the source pod with fewer than 3 players.");
+
+        if (target.PodPlayers.Count + 1 > 5)
+            throw new InvalidOperationException("The destination pod already has the maximum of 5 players.");
+
+        var remainingSource = source.PodPlayers.Where(pp => pp.Id != moving.Id)
+            .OrderBy(pp => pp.SeatOrder).ToList();
+        for (int i = 0; i < remainingSource.Count; i++)
+            remainingSource[i].SeatOrder = i + 1;
+
+        var targetPlayers = target.PodPlayers.OrderBy(pp => pp.SeatOrder).ToList();
+        moving.PodId = targetPodId;
+        moving.SeatOrder = targetPlayers.Count + 1;
+
+        var changed = remainingSource.Append(moving).ToList();
+        await _eventRepo.UpdatePodPlayersAsync(changed);
+
+        var sourceDto = new PodDto(
+            source.Id, source.PodNumber, source.FinishGroup, source.Game!.Id,
+            remainingSource.Select(pp => new PodPlayerDto(pp.PlayerId, pp.Player.Name, pp.Player.ConservativeScore, pp.SeatOrder)).ToList(),
+            "Pending", null);
+
+        var targetDto = new PodDto(
+            target.Id, target.PodNumber, target.FinishGroup, target.Game!.Id,
+            targetPlayers.Append(moving).Select(pp => new PodPlayerDto(pp.PlayerId, pp.Player.Name, pp.Player.ConservativeScore, pp.SeatOrder)).ToList(),
+            "Pending", null);
+
+        return new MovePlayerResultDto(sourceDto, targetDto);
+    }
+
     private async Task RecalculateEventRatingsAsync(int eventId)
     {
         var evt = await _eventRepo.GetWithDetailsAsync(eventId)
