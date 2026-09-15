@@ -127,4 +127,16 @@ public class EventRepository : IEventRepository
 
     public async Task<Event?> GetByCheckInTokenAsync(string token)
         => await _db.Events.FirstOrDefaultAsync(e => e.CheckInToken == token);
+
+    public async Task<Pod?> GetPodWithPlayersAsync(int podId)
+        => await _db.Pods
+            .Include(p => p.PodPlayers).ThenInclude(pp => pp.Player)
+            .Include(p => p.Game)
+            .FirstOrDefaultAsync(p => p.Id == podId);
+
+    public async Task UpdatePodPlayersAsync(IEnumerable<PodPlayer> podPlayers)
+    {
+        _db.PodPlayers.UpdateRange(podPlayers);
+        await _db.SaveChangesAsync();
+    }
 }

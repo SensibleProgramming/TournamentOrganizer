@@ -18,6 +18,7 @@ import {
   StorePublicDto,
   NotificationDto, NotificationCountDto,
   StoreAnalyticsDto,
+  MovePlayerResult,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -154,6 +155,10 @@ export class ApiService {
 
   revertGameResult(gameId: number): Observable<any> {
     return this.http.delete(`${this.base}/games/${gameId}/result`);
+  }
+
+  movePlayer(playerId: number, sourcePodId: number, targetPodId: number): Observable<MovePlayerResult> {
+    return this.http.post<MovePlayerResult>(`${this.base}/pods/move-player`, { playerId, sourcePodId, targetPodId });
   }
 
   // Standings

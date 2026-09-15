@@ -27,4 +27,5 @@ public interface IEventService
     Task<EventPlayerDto> DeclareCommanderAsync(int eventId, int playerId, DeclareCommanderDto dto);
     Task<BulkRegisterResultDto> BulkRegisterConfirmAsync(int eventId, BulkRegisterConfirmDto dto);
     Task<EventDto?> UpdateBackgroundImageUrlAsync(int eventId, string url);
+    Task<MovePlayerResultDto> MovePlayerAsync(int sourcePodId, int playerId, int targetPodId);
 }

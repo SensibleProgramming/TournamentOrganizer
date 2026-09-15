@@ -27,3 +27,7 @@ public record PodDto(
 );
 
 public record PodPlayerDto(int PlayerId, string Name, double ConservativeScore, int SeatOrder);
+
+public record MovePlayerRequestDto(int PlayerId, int SourcePodId, int TargetPodId);
+
+public record MovePlayerResultDto(PodDto SourcePod, PodDto TargetPod);

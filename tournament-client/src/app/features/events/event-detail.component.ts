@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import * as QRCode from 'qrcode';
@@ -39,7 +40,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
     MatTableModule, MatChipsModule, MatExpansionModule, MatIconModule,
     MatAutocompleteModule, MatSnackBarModule,
     PodCardComponent, EventStandingsComponent,
-    MatCheckboxModule, MatCardModule, MatDialogModule,
+    MatCheckboxModule, MatCardModule, MatDialogModule, DragDropModule,
   ],
   template: `
     @if (event) {
@@ -459,7 +460,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                   </div>
                 }
 
-                <div class="pod-grid">
+                <div class="pod-grid" cdkDropListGroup>
                   @for (pod of round.pods; track pod.podId) {
                     <app-pod-card
                       [pod]="pod"
@@ -467,7 +468,11 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       [eventId]="eventId"
                       [podState]="getPodState(pod.podId)"
                       [isStoreEmployee]="authService.isStoreEmployee || networkStatus.degraded"
-                      (stateChanged)="onPodStateChanged()">
+                      [dragActive]="draggingPlayerActive"
+                      (stateChanged)="onPodStateChanged()"
+                      (playerDropped)="onPlayerDropped($event, round)"
+                      (dragStarted)="onDragStarted()"
+                      (dragEnded)="onDragEnded()">
                     </app-pod-card>
                   }
                 </div>
@@ -537,6 +542,7 @@ export class EventDetailComponent implements OnInit {
   allPlayers: PlayerDto[] = [];
   rounds: RoundDto[] = [];
   standings: StandingsEntry[] = [];
+  draggingPlayerActive = false;
   playerIdToRegister: number | null = null;
   playerSearchText: string = '';
   newPlayerEmail: string = '';
@@ -716,6 +722,48 @@ export class EventDetailComponent implements OnInit {
 
   onPodStateChanged() {
     this.cdr.detectChanges();
+  }
+
+  onDragStarted() {
+    this.draggingPlayerActive = true;
+    this.cdr.detectChanges();
+  }
+
+  onDragEnded() {
+    this.draggingPlayerActive = false;
+    this.cdr.detectChanges();
+  }
+
+  onPlayerDropped(evt: { playerId: number; sourcePodId: number; targetPodId: number }, round: RoundDto) {
+    const sourcePod = round.pods.find(p => p.podId === evt.sourcePodId);
+    const targetPod = round.pods.find(p => p.podId === evt.targetPodId);
+    if (!sourcePod || !targetPod) return;
+
+    if (sourcePod.players.length - 1 < 3) {
+      this.snackBar.open('Source pod needs at least 3 players', 'OK', { duration: 3000 });
+      return;
+    }
+    if (targetPod.players.length + 1 > 5) {
+      this.snackBar.open('Destination pod already has 5 players', 'OK', { duration: 3000 });
+      return;
+    }
+
+    this.eventService.movePlayer(this.eventId, evt.sourcePodId, evt.playerId, evt.targetPodId).subscribe({
+      next: (result) => {
+        this.rounds = this.rounds.map(r => r.roundId !== round.roundId ? r : {
+          ...r,
+          pods: r.pods.map(p =>
+            p.podId === result.sourcePod.podId ? result.sourcePod :
+            p.podId === result.targetPod.podId ? result.targetPod : p)
+        });
+        this.cdr.detectChanges();
+        this.snackBar.open('Player moved', 'OK', { duration: 3000 });
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.error || 'Failed to move player', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private getCardsForRound(round: RoundDto): PodCardComponent[] {

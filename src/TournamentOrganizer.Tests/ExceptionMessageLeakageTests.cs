@@ -109,6 +109,8 @@ public class ExceptionMessageLeakageTests(TournamentOrganizerFactory factory)
         public Task<List<EventRegistration>> GetRegistrationsWithPlayersAsync(int eventId) => Task.FromResult(new List<EventRegistration>());
         public Task UpdateRegistrationAsync(EventRegistration r) => Task.CompletedTask;
         public Task<TournamentOrganizer.Api.Models.Event?> GetByCheckInTokenAsync(string token) => Task.FromResult<TournamentOrganizer.Api.Models.Event?>(null);
+        public Task<TournamentOrganizer.Api.Models.Pod?> GetPodWithPlayersAsync(int podId) => throw new NotImplementedException();
+        public Task UpdatePodPlayersAsync(IEnumerable<TournamentOrganizer.Api.Models.PodPlayer> podPlayers) => throw new NotImplementedException();
         public Task<Round?> GetLatestRoundAsync(int eventId) => Task.FromResult<Round?>(null);
         public Task<List<Player>> GetRegisteredPlayersAsync(int eventId) => Task.FromResult(new List<Player>());
         public Task<TournamentOrganizer.Api.Models.Event?> GetWithDetailsAsync(int id) => Task.FromResult<TournamentOrganizer.Api.Models.Event?>(null);

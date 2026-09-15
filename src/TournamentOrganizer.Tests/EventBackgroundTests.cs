@@ -55,6 +55,8 @@ public class EventBackgroundTests
         public Task RemoveRegistrationAsync(EventRegistration r) => Task.CompletedTask;
         public Task<Event?> GetByCheckInTokenAsync(string token) => Task.FromResult<Event?>(null);
         public Task<List<Player>> GetRegisteredPlayersAsync(int eid) => Task.FromResult(new List<Player>());
+        public Task<Pod?> GetPodWithPlayersAsync(int podId) => throw new NotImplementedException();
+        public Task UpdatePodPlayersAsync(IEnumerable<PodPlayer> podPlayers) => throw new NotImplementedException();
     }
 
     private sealed class FakeStoreEventRepo : IStoreEventRepository
@@ -193,6 +195,7 @@ public class EventBackgroundTests
         public Task<CheckInResponseDto> CheckInByTokenAsync(string token, string playerEmail) => throw new NotImplementedException();
         public Task<EventPlayerDto> DeclareCommanderAsync(int eventId, int playerId, DeclareCommanderDto dto) => throw new NotImplementedException();
         public Task<BulkRegisterResultDto> BulkRegisterConfirmAsync(int eventId, BulkRegisterConfirmDto dto) => throw new NotImplementedException();
+        public Task<MovePlayerResultDto> MovePlayerAsync(int sourcePodId, int playerId, int targetPodId) => throw new NotImplementedException();
     }
 
     // ── Fake IWebHostEnvironment ──────────────────────────────────────────

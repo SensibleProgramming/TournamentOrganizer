@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, NotificationCountDto, NotificationDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, RoundDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto, StoreAnalyticsDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, MovePlayerResult, NotificationCountDto, NotificationDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, RoundDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto, StoreAnalyticsDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -262,6 +262,17 @@ export async function mockSetCheckIn(page: Page, eventId: number, playerId: numb
   await page.route(`**/api/events/${eventId}/players/${playerId}/checkin`, route => {
     if (route.request().method() === 'PUT') {
       route.fulfill({ json: response });
+    } else {
+      route.fallback();
+    }
+  });
+}
+
+/** Intercept POST /api/pods/move-player and return the given result. */
+export async function mockMovePlayer(page: Page, result: MovePlayerResult): Promise<void> {
+  await page.route('**/api/pods/move-player', route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ json: result });
     } else {
       route.fallback();
     }

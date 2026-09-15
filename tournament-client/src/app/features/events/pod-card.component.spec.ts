@@ -468,6 +468,88 @@ describe('PodCardComponent', () => {
     });
   });
 
+  // ─── onPlayerDropped (drag-and-drop between pods) ────────────────────────
+
+  describe('onPlayerDropped()', () => {
+    function makeDropEvent(previousPodId: number, containerPodId: number, player = component.pod.players[0]) {
+      return {
+        previousContainer: { data: previousPodId },
+        container: { data: containerPodId },
+        item: { data: player },
+      } as any;
+    }
+
+    it('emits playerDropped with playerId/sourcePodId/targetPodId when dropped in a different pod', () => {
+      const spy = jest.spyOn(component.playerDropped, 'emit');
+      component.onPlayerDropped(makeDropEvent(10, 20, component.pod.players[1]));
+      expect(spy).toHaveBeenCalledWith({ playerId: 2, sourcePodId: 10, targetPodId: 20 });
+    });
+
+    it('does not emit when dropped back into the same pod', () => {
+      const spy = jest.spyOn(component.playerDropped, 'emit');
+      component.onPlayerDropped(makeDropEvent(10, 10));
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── drop zone rendering ──────────────────────────────────────────────────
+
+  describe('drag-and-drop zone rendering', () => {
+    it('renders a cdkDropList when the pod is not submitted', () => {
+      component.podState = makePodState({ submitted: false });
+      fixture.detectChanges();
+      const dropList = fixture.nativeElement.querySelector('[cdkDropList]');
+      expect(dropList).not.toBeNull();
+    });
+
+    it('does not render a cdkDropList once the pod is submitted', () => {
+      component.podState = makePodState({ submitted: true, winnerId: 1 });
+      fixture.detectChanges();
+      const dropList = fixture.nativeElement.querySelector('[cdkDropList]');
+      expect(dropList).toBeNull();
+    });
+  });
+
+  // ─── canAcceptPlayer (drop-list capacity gate) ───────────────────────────
+
+  describe('canAcceptPlayer()', () => {
+    it('returns true when the pod has fewer than 5 players', () => {
+      component.pod = makePod(); // 4 players
+      expect(component.canAcceptPlayer({} as any, {} as any)).toBe(true);
+    });
+
+    it('returns false when the pod already has 5 players', () => {
+      component.pod = makePod({
+        players: [
+          { playerId: 1, name: 'A', seatOrder: 1 },
+          { playerId: 2, name: 'B', seatOrder: 2 },
+          { playerId: 3, name: 'C', seatOrder: 3 },
+          { playerId: 4, name: 'D', seatOrder: 4 },
+          { playerId: 5, name: 'E', seatOrder: 5 },
+        ],
+      } as Partial<PodDto>);
+      expect(component.canAcceptPlayer({} as any, {} as any)).toBe(false);
+    });
+  });
+
+  // ─── dragActive input — cursor state class ───────────────────────────────
+
+  describe('dragActive input', () => {
+    it('applies "dragging-active" class to the drop list when true', () => {
+      component.dragActive = true;
+      fixture.detectChanges();
+      const dropList = fixture.nativeElement.querySelector('.pod-players-list');
+      expect(dropList.classList.contains('dragging-active')).toBe(true);
+    });
+
+    it('does not apply "dragging-active" when false', () => {
+      component.dragActive = false;
+      fixture.detectChanges();
+      const dropList = fixture.nativeElement.querySelector('.pod-players-list');
+      expect(dropList.classList.contains('dragging-active')).toBe(false);
+    });
+  });
+
   // ─── buildDefaultResult (via submitPodResult) ────────────────────────────
 
   describe('buildDefaultResult (verified through submitPodResult)', () => {

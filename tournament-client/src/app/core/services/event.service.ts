@@ -9,7 +9,7 @@ import { StoreContextService } from './store-context.service';
 import { isBackendUnreachable } from '../utils/network-error.util';
 import {
   EventDto, RoundDto, PodDto, StandingsEntry, CreateEventDto,
-  GameResultSubmit, EventPlayerDto, RegisterPlayerDto
+  GameResultSubmit, EventPlayerDto, RegisterPlayerDto, MovePlayerResult
 } from '../models/api.models';
 
 // Minimal player shape used for local pod-seeding calculations.
@@ -656,6 +656,74 @@ export class EventService {
         return of<void>(undefined);
       })
     );
+  }
+
+  movePlayer(eventId: number, sourcePodId: number, playerId: number, targetPodId: number): Observable<MovePlayerResult> {
+    return this.api.movePlayer(playerId, sourcePodId, targetPodId).pipe(
+      tap(result => this._applyMoveToRounds(eventId, result)),
+      catchError(() => {
+        try {
+          const result = this._movePlayerLocally(sourcePodId, playerId, targetPodId);
+          this._applyMoveToRounds(eventId, result);
+          return of(result);
+        } catch (e: unknown) {
+          return throwError(() => ({ error: { error: (e as Error).message } }));
+        }
+      })
+    );
+  }
+
+  private _applyMoveToRounds(eventId: number, result: MovePlayerResult): void {
+    const current = this.roundsSubject.value;
+    const updated = current.map(round => ({
+      ...round,
+      pods: round.pods.map(p =>
+        p.podId === result.sourcePod.podId ? result.sourcePod :
+        p.podId === result.targetPod.podId ? result.targetPod : p)
+    }));
+    this.writeCache('rounds', eventId, updated);
+    this.roundsSubject.next(updated);
+  }
+
+  private _movePlayerLocally(sourcePodId: number, playerId: number, targetPodId: number): MovePlayerResult {
+    if (sourcePodId === targetPodId)
+      throw new Error('Source and destination pod must be different.');
+
+    const round = this.roundsSubject.value.find(r => r.pods.some(p => p.podId === sourcePodId));
+    const source = round?.pods.find(p => p.podId === sourcePodId);
+    if (!round || !source)
+      throw new Error('Source pod not found.');
+
+    const target = round.pods.find(p => p.podId === targetPodId);
+    if (!target)
+      throw new Error('Destination pod not found.');
+
+    if (source.gameStatus !== 'Pending' || target.gameStatus !== 'Pending')
+      throw new Error('Players can only be moved before results are submitted.');
+
+    const moving = source.players.find(p => p.playerId === playerId);
+    if (!moving)
+      throw new Error('Player is not in the source pod.');
+
+    if (target.players.some(p => p.playerId === playerId))
+      throw new Error('Player is already in the destination pod.');
+
+    if (source.players.length - 1 < 3)
+      throw new Error('Moving this player would leave the source pod with fewer than 3 players.');
+
+    if (target.players.length + 1 > 5)
+      throw new Error('The destination pod already has the maximum of 5 players.');
+
+    const remainingSource = source.players
+      .filter(p => p.playerId !== playerId)
+      .map((p, i) => ({ ...p, seatOrder: i + 1 }));
+
+    const newTargetPlayers = [...target.players, { ...moving, seatOrder: target.players.length + 1 }];
+
+    return {
+      sourcePod: { ...source, players: remainingSource },
+      targetPod: { ...target, players: newTargetPlayers },
+    };
   }
 
   private _patchPodInRoundsCache(eventId: number, gameId: number, patch: Partial<PodDto>): void {

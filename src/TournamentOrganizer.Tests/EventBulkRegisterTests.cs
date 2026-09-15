@@ -40,6 +40,8 @@ public class EventBulkRegisterTests
 
         // stubs
         public Task<Event?> GetByCheckInTokenAsync(string token)                        => Task.FromResult<Event?>(null);
+        public Task<Pod?> GetPodWithPlayersAsync(int podId)                             => throw new NotImplementedException();
+        public Task UpdatePodPlayersAsync(IEnumerable<PodPlayer> podPlayers)            => throw new NotImplementedException();
         public Task<Round?> GetLatestRoundAsync(int eventId)                            => Task.FromResult<Round?>(null);
         public Task<List<Player>> GetRegisteredPlayersAsync(int eventId)                => Task.FromResult(new List<Player>());
         public Task<Event?> GetWithDetailsAsync(int id)                                 => Task.FromResult<Event?>(null);

@@ -2,7 +2,7 @@ import { firstValueFrom, of, throwError } from 'rxjs';
 import { EventService } from './event.service';
 import {
   EventDto, EventPlayerDto, GameResultSubmit,
-  RegisterPlayerDto, RoundDto, StandingsEntry,
+  RegisterPlayerDto, RoundDto, StandingsEntry, PodDto, MovePlayerResult,
 } from '../models/api.models';
 
 describe('EventService', () => {
@@ -23,6 +23,7 @@ describe('EventService', () => {
     submitGameResult: jest.Mock;
     getStandings: jest.Mock;
     revertGameResult: jest.Mock;
+    movePlayer: jest.Mock;
   };
 
   let mockCtx: {
@@ -65,6 +66,7 @@ describe('EventService', () => {
       submitGameResult: jest.fn().mockReturnValue(of({})),
       getStandings:     jest.fn().mockReturnValue(of([])),
       revertGameResult: jest.fn().mockReturnValue(of({})),
+      movePlayer:       jest.fn().mockReturnValue(of({})),
     };
 
     mockCtx = {
@@ -295,6 +297,89 @@ describe('EventService', () => {
       await firstValueFrom(service.submitGameResult(99, results));
 
       expect(mockApi.submitGameResult).toHaveBeenCalledWith(99, results);
+    });
+  });
+
+  // ── movePlayer ────────────────────────────────────────────────────────────
+
+  describe('movePlayer', () => {
+    const podA: PodDto = {
+      podId: 1, podNumber: 1, finishGroup: null, gameId: 10, gameStatus: 'Pending', winnerPlayerId: null,
+      players: [
+        { playerId: 7, name: 'Alice', conservativeScore: 10, seatOrder: 1 },
+        { playerId: 8, name: 'Bob', conservativeScore: 10, seatOrder: 2 },
+        { playerId: 9, name: 'Cara', conservativeScore: 10, seatOrder: 3 },
+        { playerId: 11, name: 'Dan', conservativeScore: 10, seatOrder: 4 },
+      ],
+    };
+    const podB: PodDto = {
+      podId: 2, podNumber: 2, finishGroup: null, gameId: 20, gameStatus: 'Pending', winnerPlayerId: null,
+      players: [
+        { playerId: 12, name: 'Eve', conservativeScore: 10, seatOrder: 1 },
+        { playerId: 13, name: 'Finn', conservativeScore: 10, seatOrder: 2 },
+        { playerId: 14, name: 'Gus', conservativeScore: 10, seatOrder: 3 },
+        { playerId: 15, name: 'Hana', conservativeScore: 10, seatOrder: 4 },
+      ],
+    };
+    const roundWithPods: RoundDto = { roundId: 5, roundNumber: 1, pods: [podA, podB] };
+
+    beforeEach(() => {
+      mockApi.getRounds.mockReturnValue(of([roundWithPods]));
+      service.loadRounds(1);
+    });
+
+    it('delegates to api.movePlayer and patches rounds$ with the returned pods', async () => {
+      const moveResult: MovePlayerResult = {
+        sourcePod: { ...podA, players: podA.players.filter(p => p.playerId !== 7) },
+        targetPod: { ...podB, players: [...podB.players, { playerId: 7, name: 'Alice', conservativeScore: 10, seatOrder: 5 }] },
+      };
+      mockApi.movePlayer.mockReturnValue(of(moveResult));
+
+      const result = await firstValueFrom(service.movePlayer(1, 1, 7, 2));
+
+      expect(mockApi.movePlayer).toHaveBeenCalledWith(7, 1, 2);
+      expect(result).toEqual(moveResult);
+
+      const rounds = await firstValueFrom(service.rounds$);
+      expect(rounds[0].pods.find(p => p.podId === 1)).toEqual(moveResult.sourcePod);
+      expect(rounds[0].pods.find(p => p.podId === 2)).toEqual(moveResult.targetPod);
+    });
+
+    describe('offline fallback (API fails)', () => {
+      beforeEach(() => {
+        mockApi.movePlayer.mockReturnValue(throwError(() => ({ status: 500 })));
+      });
+
+      it('moves the player locally and renumbers seats contiguously', async () => {
+        const result = await firstValueFrom(service.movePlayer(1, 1, 7, 2));
+
+        expect(result.sourcePod.players.map(p => p.playerId)).toEqual([8, 9, 11]);
+        expect(result.sourcePod.players.map(p => p.seatOrder)).toEqual([1, 2, 3]);
+        expect(result.targetPod.players.map(p => p.playerId)).toEqual([12, 13, 14, 15, 7]);
+        expect(result.targetPod.players.find(p => p.playerId === 7)?.seatOrder).toBe(5);
+
+        const rounds = await firstValueFrom(service.rounds$);
+        expect(rounds[0].pods.find(p => p.podId === 1)?.players).toHaveLength(3);
+        expect(rounds[0].pods.find(p => p.podId === 2)?.players).toHaveLength(5);
+      });
+
+      it('throws a formatted error when the destination pod is already full', async () => {
+        const fullPodB: PodDto = { ...podB, players: [...podB.players, { playerId: 16, name: 'Ivy', conservativeScore: 10, seatOrder: 5 }] };
+        mockApi.getRounds.mockReturnValue(of([{ ...roundWithPods, pods: [podA, fullPodB] }]));
+        service.loadRounds(1);
+
+        await expect(firstValueFrom(service.movePlayer(1, 1, 7, 2)))
+          .rejects.toEqual({ error: { error: expect.stringContaining('maximum of 5 players') } });
+      });
+
+      it('throws a formatted error when the source pod would drop below 3 players', async () => {
+        const smallPodA: PodDto = { ...podA, players: podA.players.slice(0, 3) };
+        mockApi.getRounds.mockReturnValue(of([{ ...roundWithPods, pods: [smallPodA, podB] }]));
+        service.loadRounds(1);
+
+        await expect(firstValueFrom(service.movePlayer(1, 1, smallPodA.players[0].playerId, 2)))
+          .rejects.toEqual({ error: { error: expect.stringContaining('fewer than 3 players') } });
+      });
     });
   });
 
