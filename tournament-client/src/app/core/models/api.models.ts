@@ -222,6 +222,11 @@ export interface PodPlayer {
   seatOrder: number;
 }
 
+export interface MovePlayerResult {
+  sourcePod: PodDto;
+  targetPod: PodDto;
+}
+
 // Wishlist / For-Trade
 export interface WishlistEntryDto {
   id: number;

@@ -8,7 +8,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { EventDto, PodDto, GameResultSubmit } from '../../core/models/api.models';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { EventDto, PodDto, PodPlayer, GameResultSubmit } from '../../core/models/api.models';
 import { EventService } from '../../core/services/event.service';
 import { PodTimerComponent } from '../../shared/components/pod-timer.component';
 
@@ -24,7 +25,7 @@ export interface PodResultState {
   imports: [
     CommonModule, RouterLink,
     MatCardModule, MatButtonModule, MatFormFieldModule, MatSelectModule,
-    MatIconModule, MatChipsModule, MatSnackBarModule, PodTimerComponent
+    MatIconModule, MatChipsModule, MatSnackBarModule, DragDropModule, PodTimerComponent
   ],
   template: `
     <mat-card class="pod-card" [class.pod-completed]="podState.submitted">
@@ -42,9 +43,13 @@ export interface PodResultState {
             [defaultMinutes]="event.defaultRoundTimeMinutes">
           </app-pod-timer>
 
-          <div class="pod-players-list">
+          <div class="pod-players-list"
+               cdkDropList
+               [id]="'pod-' + pod.podId"
+               [cdkDropListData]="pod.podId"
+               (cdkDropListDropped)="onPlayerDropped($event)">
             @for (player of pod.players; track player.playerId) {
-              <div class="pod-player">
+              <div class="pod-player" cdkDrag [cdkDragData]="player">
                 <span class="seat-number">{{ player.seatOrder }}.</span>
                 <span>{{ player.name }}</span>
               </div>
@@ -157,6 +162,7 @@ export class PodCardComponent {
   @Input() podState!: PodResultState;
   @Input() isStoreEmployee = false;
   @Output() stateChanged = new EventEmitter<void>();
+  @Output() playerDropped = new EventEmitter<{ playerId: number; sourcePodId: number; targetPodId: number }>();
 
   @ViewChild('podTimerRef') private podTimer?: PodTimerComponent;
 
@@ -175,6 +181,14 @@ export class PodCardComponent {
   pauseTimer() { this.podTimer?.pause(); }
   resumeTimer() { this.podTimer?.resume(); }
   addTime(seconds: number) { this.podTimer?.addTime(seconds); }
+
+  onPlayerDropped(event: CdkDragDrop<number>) {
+    const sourcePodId = event.previousContainer.data;
+    const targetPodId = event.container.data;
+    if (sourcePodId === targetPodId) return;
+    const player = event.item.data as PodPlayer;
+    this.playerDropped.emit({ playerId: player.playerId, sourcePodId, targetPodId });
+  }
 
   onWinnerChanged() {
     const others = this.pod.players.filter(p => p.playerId !== this.podState.winnerId);

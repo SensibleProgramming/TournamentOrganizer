@@ -468,6 +468,48 @@ describe('PodCardComponent', () => {
     });
   });
 
+  // ─── onPlayerDropped (drag-and-drop between pods) ────────────────────────
+
+  describe('onPlayerDropped()', () => {
+    function makeDropEvent(previousPodId: number, containerPodId: number, player = component.pod.players[0]) {
+      return {
+        previousContainer: { data: previousPodId },
+        container: { data: containerPodId },
+        item: { data: player },
+      } as any;
+    }
+
+    it('emits playerDropped with playerId/sourcePodId/targetPodId when dropped in a different pod', () => {
+      const spy = jest.spyOn(component.playerDropped, 'emit');
+      component.onPlayerDropped(makeDropEvent(10, 20, component.pod.players[1]));
+      expect(spy).toHaveBeenCalledWith({ playerId: 2, sourcePodId: 10, targetPodId: 20 });
+    });
+
+    it('does not emit when dropped back into the same pod', () => {
+      const spy = jest.spyOn(component.playerDropped, 'emit');
+      component.onPlayerDropped(makeDropEvent(10, 10));
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── drop zone rendering ──────────────────────────────────────────────────
+
+  describe('drag-and-drop zone rendering', () => {
+    it('renders a cdkDropList when the pod is not submitted', () => {
+      component.podState = makePodState({ submitted: false });
+      fixture.detectChanges();
+      const dropList = fixture.nativeElement.querySelector('[cdkDropList]');
+      expect(dropList).not.toBeNull();
+    });
+
+    it('does not render a cdkDropList once the pod is submitted', () => {
+      component.podState = makePodState({ submitted: true, winnerId: 1 });
+      fixture.detectChanges();
+      const dropList = fixture.nativeElement.querySelector('[cdkDropList]');
+      expect(dropList).toBeNull();
+    });
+  });
+
   // ─── buildDefaultResult (via submitPodResult) ────────────────────────────
 
   describe('buildDefaultResult (verified through submitPodResult)', () => {

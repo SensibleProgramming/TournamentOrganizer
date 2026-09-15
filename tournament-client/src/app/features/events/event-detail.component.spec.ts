@@ -13,7 +13,7 @@ import { Subject, of as observableOf } from 'rxjs';
 import { ScryfallService } from '../../core/services/scryfall.service';
 import { NetworkStatusService } from '../../core/services/network-status.service';
 import {
-  EventDto, EventPlayerDto, PlayerDto, RoundDto, StandingsEntry,
+  EventDto, EventPlayerDto, PlayerDto, RoundDto, StandingsEntry, PodDto, MovePlayerResult,
 } from '../../core/models/api.models';
 import { ApiService } from '../../core/services/api.service';
 
@@ -69,6 +69,7 @@ describe('EventDetailComponent', () => {
     addRound:          jest.Mock;
     clearRounds:       jest.Mock;
     clearAllPlayers:   jest.Mock;
+    movePlayer:        jest.Mock;
   };
 
   let mockPlayerService: {
@@ -136,6 +137,7 @@ describe('EventDetailComponent', () => {
       addRound:         jest.fn(),
       clearRounds:      jest.fn(),
       clearAllPlayers:  jest.fn().mockReturnValue(of({})),
+      movePlayer:       jest.fn().mockReturnValue(of({})),
     };
 
     mockPlayerService = {
@@ -205,6 +207,101 @@ describe('EventDetailComponent', () => {
     const fixture = TestBed.createComponent(EventDetailComponent);
     fixture.detectChanges();
     expect(mockEventService.loadStandings).toHaveBeenCalledWith(EVENT_ID);
+  });
+
+  // ── onPlayerDropped (drag-and-drop pod move) ────────────────────────────────
+
+  describe('onPlayerDropped', () => {
+    const podA: PodDto = {
+      podId: 10, podNumber: 1, finishGroup: null, gameId: 100, gameStatus: 'Pending', winnerPlayerId: null,
+      players: [
+        { playerId: 1, name: 'Alice', conservativeScore: 10, seatOrder: 1 },
+        { playerId: 2, name: 'Bob', conservativeScore: 10, seatOrder: 2 },
+        { playerId: 3, name: 'Carol', conservativeScore: 10, seatOrder: 3 },
+        { playerId: 4, name: 'Dave', conservativeScore: 10, seatOrder: 4 },
+      ],
+    };
+    const podB: PodDto = {
+      podId: 20, podNumber: 2, finishGroup: null, gameId: 200, gameStatus: 'Pending', winnerPlayerId: null,
+      players: [
+        { playerId: 5, name: 'Eve', conservativeScore: 10, seatOrder: 1 },
+        { playerId: 6, name: 'Finn', conservativeScore: 10, seatOrder: 2 },
+        { playerId: 7, name: 'Gus', conservativeScore: 10, seatOrder: 3 },
+        { playerId: 8, name: 'Hana', conservativeScore: 10, seatOrder: 4 },
+      ],
+    };
+    const roundWithPods: RoundDto = { roundId: 1, roundNumber: 1, pods: [podA, podB] };
+
+    async function setupWithRound() {
+      await setup();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      roundsSubject.next([roundWithPods]);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('calls eventService.movePlayer with the correct args', async () => {
+      const fixture = await setupWithRound();
+      fixture.componentInstance.onPlayerDropped({ playerId: 1, sourcePodId: 10, targetPodId: 20 }, roundWithPods);
+      expect(mockEventService.movePlayer).toHaveBeenCalledWith(EVENT_ID, 10, 1, 20);
+    });
+
+    it('patches rounds with the returned pods and shows a success snackbar', async () => {
+      const fixture = await setupWithRound();
+      const snackBarOpenSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
+      const moveResult: MovePlayerResult = {
+        sourcePod: { ...podA, players: podA.players.filter(p => p.playerId !== 1) },
+        targetPod: { ...podB, players: [...podB.players, { playerId: 1, name: 'Alice', conservativeScore: 10, seatOrder: 5 }] },
+      };
+      mockEventService.movePlayer.mockReturnValue(of(moveResult));
+
+      fixture.componentInstance.onPlayerDropped({ playerId: 1, sourcePodId: 10, targetPodId: 20 }, roundWithPods);
+
+      const rounds = fixture.componentInstance.rounds;
+      expect(rounds[0].pods.find(p => p.podId === 10)).toEqual(moveResult.sourcePod);
+      expect(rounds[0].pods.find(p => p.podId === 20)).toEqual(moveResult.targetPod);
+      expect(snackBarOpenSpy).toHaveBeenCalledWith('Player moved', 'OK', { duration: 3000 });
+    });
+
+    it('shows an error snackbar and does not mutate rounds on API failure', async () => {
+      const fixture = await setupWithRound();
+      const snackBarOpenSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
+      mockEventService.movePlayer.mockReturnValue(throwError(() => ({ error: { error: 'Cannot move' } })));
+
+      fixture.componentInstance.onPlayerDropped({ playerId: 1, sourcePodId: 10, targetPodId: 20 }, roundWithPods);
+
+      expect(fixture.componentInstance.rounds).toEqual([roundWithPods]);
+      expect(snackBarOpenSpy).toHaveBeenCalledWith('Cannot move', 'OK', { duration: 3000 });
+    });
+
+    it('short-circuits without calling the service when the source pod would drop below 3 players', async () => {
+      const smallPodA: PodDto = { ...podA, players: podA.players.slice(0, 3) };
+      const round: RoundDto = { ...roundWithPods, pods: [smallPodA, podB] };
+      const fixture = await setupWithRound();
+      const snackBarOpenSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
+      roundsSubject.next([round]);
+      fixture.detectChanges();
+
+      fixture.componentInstance.onPlayerDropped({ playerId: smallPodA.players[0].playerId, sourcePodId: 10, targetPodId: 20 }, round);
+
+      expect(mockEventService.movePlayer).not.toHaveBeenCalled();
+      expect(snackBarOpenSpy).toHaveBeenCalledWith('Source pod needs at least 3 players', 'OK', { duration: 3000 });
+    });
+
+    it('short-circuits without calling the service when the target pod already has 5 players', async () => {
+      const fullPodB: PodDto = { ...podB, players: [...podB.players, { playerId: 9, name: 'Ivy', conservativeScore: 10, seatOrder: 5 }] };
+      const round: RoundDto = { ...roundWithPods, pods: [podA, fullPodB] };
+      const fixture = await setupWithRound();
+      const snackBarOpenSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
+      roundsSubject.next([round]);
+      fixture.detectChanges();
+
+      fixture.componentInstance.onPlayerDropped({ playerId: 1, sourcePodId: 10, targetPodId: 20 }, round);
+
+      expect(mockEventService.movePlayer).not.toHaveBeenCalled();
+      expect(snackBarOpenSpy).toHaveBeenCalledWith('Destination pod already has 5 players', 'OK', { duration: 3000 });
+    });
   });
 
   it('populates event from currentEvent$ subscription', async () => {

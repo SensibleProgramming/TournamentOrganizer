@@ -216,6 +216,16 @@ describe('ApiService', () => {
     });
   });
 
+  describe('movePlayer()', () => {
+    it('makes POST /api/pods/move-player with playerId, sourcePodId, targetPodId', () => {
+      service.movePlayer(7, 1, 2).subscribe();
+      const req = http.expectOne('/api/pods/move-player');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ playerId: 7, sourcePodId: 1, targetPodId: 2 });
+      req.flush({});
+    });
+  });
+
   // ─── Standings ────────────────────────────────────────────────────────────
 
   describe('getStandings()', () => {
