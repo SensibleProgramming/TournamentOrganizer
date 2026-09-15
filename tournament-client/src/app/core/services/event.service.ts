@@ -265,16 +265,25 @@ export class EventService {
     // remove from local storage and complete immediately, no API call needed.
     if (id < 0) {
       this.ctx.events.remove(id as unknown as EventDto['id']);
+      this.clearEventCache(id);
       this.eventsSubject.next(this.eventsForActiveStore());
       return of<void>(undefined);
     }
     return this.api.removeEvent(id).pipe(
       tap(() => {
         this.ctx.events.remove(id as unknown as EventDto['id']);
+        this.clearEventCache(id);
         this.eventsSubject.next(this.eventsForActiveStore());
       }),
       map((): void => {})
     );
+  }
+
+  /** Purge per-event localStorage caches so a recycled event ID never inherits stale data. */
+  private clearEventCache(eventId: number): void {
+    this.storage.removeItem(this.cacheKey('rounds', eventId));
+    this.storage.removeItem(this.cacheKey('ep', eventId));
+    this.storage.removeItem(this.cacheKey('standings', eventId));
   }
 
   dropPlayer(eventId: number, playerId: number) {
@@ -493,7 +502,7 @@ export class EventService {
   /** Round 1: snake draft by conservativeScore descending. */
   private _generateRound1Pods(players: LocalPlayer[]): LocalPlayer[][] {
     const sorted   = [...players].sort((a, b) => b.conservativeScore - a.conservativeScore);
-    const podCount = Math.max(1, Math.floor(sorted.length / 4));
+    const podCount = Math.max(1, Math.ceil(sorted.length / 4));
     const pods: LocalPlayer[][] = Array.from({ length: podCount }, () => []);
 
     let forward  = true;
