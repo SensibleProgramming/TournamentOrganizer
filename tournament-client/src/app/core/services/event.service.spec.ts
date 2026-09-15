@@ -35,7 +35,7 @@ describe('EventService', () => {
 
   let mockStoreContext: { selectedStoreId: number | null };
 
-  let mockStorage: { getItem: jest.Mock; setItem: jest.Mock };
+  let mockStorage: { getItem: jest.Mock; setItem: jest.Mock; removeItem: jest.Mock };
 
   const eventStub: EventDto = {
     id: 1, name: 'Test Event', date: '2025-01-01',
@@ -89,6 +89,7 @@ describe('EventService', () => {
     mockStorage = {
       getItem: jest.fn().mockReturnValue(null),
       setItem: jest.fn(),
+      removeItem: jest.fn(),
     };
 
     mockStoreContext = { selectedStoreId: null };
@@ -189,6 +190,20 @@ describe('EventService', () => {
       await firstValueFrom(service.removeEvent(5));
       expect(mockApi.removeEvent).toHaveBeenCalledWith(5);
     });
+
+    it('purges the rounds/ep/standings cache for a negative (local-only) id', async () => {
+      await firstValueFrom(service.removeEvent(-3));
+      expect(mockStorage.removeItem).toHaveBeenCalledWith('to_store_1_rounds_-3');
+      expect(mockStorage.removeItem).toHaveBeenCalledWith('to_store_1_ep_-3');
+      expect(mockStorage.removeItem).toHaveBeenCalledWith('to_store_1_standings_-3');
+    });
+
+    it('purges the rounds/ep/standings cache after api.removeEvent succeeds for a positive id', async () => {
+      await firstValueFrom(service.removeEvent(5));
+      expect(mockStorage.removeItem).toHaveBeenCalledWith('to_store_1_rounds_5');
+      expect(mockStorage.removeItem).toHaveBeenCalledWith('to_store_1_ep_5');
+      expect(mockStorage.removeItem).toHaveBeenCalledWith('to_store_1_standings_5');
+    });
   });
 
   // ── dropPlayer ────────────────────────────────────────────────────────────
@@ -230,6 +245,41 @@ describe('EventService', () => {
       const result = await firstValueFrom(service.generateNextRound$(1));
       expect(mockApi.generateNextRound).toHaveBeenCalledWith(1);
       expect(result).toEqual(roundStub);
+    });
+
+    describe('local pod generation (eventId < 0, Round 1)', () => {
+      const makePlayer = (id: number, score: number): EventPlayerDto => ({
+        playerId: id, name: `Player${id}`, conservativeScore: score, isRanked: true,
+        decklistUrl: null, commanders: null, isDropped: false, isDisqualified: false, isCheckedIn: false,
+      });
+
+      it('splits 6 active players into two pods of 3, not one pod of 6', async () => {
+        service['eventPlayersSubject'].next([
+          makePlayer(1, 30), makePlayer(2, 28), makePlayer(3, 26),
+          makePlayer(4, 24), makePlayer(5, 22), makePlayer(6, 20),
+        ]);
+
+        const round = await firstValueFrom(service.generateNextRound$(-1));
+
+        expect(round.pods).toHaveLength(2);
+        for (const pod of round.pods) {
+          expect(pod.players.length).toBeGreaterThanOrEqual(3);
+          expect(pod.players.length).toBeLessThanOrEqual(5);
+        }
+        expect(round.pods.reduce((sum, p) => sum + p.players.length, 0)).toBe(6);
+      });
+
+      it('keeps 8 active players in two pods of 4', async () => {
+        service['eventPlayersSubject'].next([
+          makePlayer(1, 30), makePlayer(2, 28), makePlayer(3, 26), makePlayer(4, 24),
+          makePlayer(5, 22), makePlayer(6, 20), makePlayer(7, 18), makePlayer(8, 16),
+        ]);
+
+        const round = await firstValueFrom(service.generateNextRound$(-1));
+
+        expect(round.pods).toHaveLength(2);
+        expect(round.pods.every(p => p.players.length === 4)).toBe(true);
+      });
     });
   });
 
