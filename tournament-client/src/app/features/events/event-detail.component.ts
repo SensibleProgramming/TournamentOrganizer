@@ -468,8 +468,11 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       [eventId]="eventId"
                       [podState]="getPodState(pod.podId)"
                       [isStoreEmployee]="authService.isStoreEmployee || networkStatus.degraded"
+                      [dragActive]="draggingPlayerActive"
                       (stateChanged)="onPodStateChanged()"
-                      (playerDropped)="onPlayerDropped($event, round)">
+                      (playerDropped)="onPlayerDropped($event, round)"
+                      (dragStarted)="onDragStarted()"
+                      (dragEnded)="onDragEnded()">
                     </app-pod-card>
                   }
                 </div>
@@ -539,6 +542,7 @@ export class EventDetailComponent implements OnInit {
   allPlayers: PlayerDto[] = [];
   rounds: RoundDto[] = [];
   standings: StandingsEntry[] = [];
+  draggingPlayerActive = false;
   playerIdToRegister: number | null = null;
   playerSearchText: string = '';
   newPlayerEmail: string = '';
@@ -717,6 +721,16 @@ export class EventDetailComponent implements OnInit {
   }
 
   onPodStateChanged() {
+    this.cdr.detectChanges();
+  }
+
+  onDragStarted() {
+    this.draggingPlayerActive = true;
+    this.cdr.detectChanges();
+  }
+
+  onDragEnded() {
+    this.draggingPlayerActive = false;
     this.cdr.detectChanges();
   }
 

@@ -114,4 +114,59 @@ test.describe('Pod player move (drag-and-drop)', () => {
     await expect(page.locator('#pod-1 .pod-player', { hasText: 'Alice' })).toHaveCount(0);
     await expect(page.locator('mat-snack-bar-container')).toContainText('Player moved');
   });
+
+  test('shows a grab cursor on a draggable player row before dragging', async ({ page }) => {
+    const source = page.locator('#pod-1 .pod-player', { hasText: 'Alice' });
+    await expect(source).toBeVisible();
+    await expect(source).toHaveCSS('cursor', 'grab');
+  });
+
+  test('shows a not-allowed cursor while dragging over a pod that is already full', async ({ page }) => {
+    // Re-mock rounds so pod-2 is already at max capacity (5 players).
+    const fullPod2: PodDto = {
+      ...POD_2,
+      players: [...POD_2.players, { playerId: 9, name: 'Ivy', conservativeScore: 10, seatOrder: 5 }],
+    };
+    await mockGetEventRounds(page, EVENT_ID, [{ roundId: 1, roundNumber: 1, pods: [POD_1, fullPod2] }]);
+    await page.reload();
+    await page.getByRole('tab', { name: 'Rounds' }).click();
+
+    const source = page.locator('#pod-1 .pod-player', { hasText: 'Alice' });
+    const target = page.locator('#pod-2');
+    await expect(source).toBeVisible();
+
+    const sourceHandle = await source.elementHandle();
+    const targetHandle = await target.elementHandle();
+    if (!sourceHandle || !targetHandle) throw new Error('Could not locate drag source/target elements');
+    await sourceHandle.waitForElementState('stable');
+    await targetHandle.waitForElementState('stable');
+
+    const sourceBox = await sourceHandle.boundingBox();
+    const targetBox = await targetHandle.boundingBox();
+    if (!sourceBox || !targetBox) throw new Error('Could not measure drag source/target');
+
+    const startX = sourceBox.x + sourceBox.width / 2;
+    const startY = sourceBox.y + sourceBox.height / 2;
+    const endX = targetBox.x + targetBox.width / 2;
+    const endY = targetBox.y + targetBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 5, startY + 5);
+    await page.mouse.move(startX + 15, startY + 15, { steps: 10 });
+
+    const steps = 20;
+    for (let i = 1; i <= steps; i++) {
+      const x = startX + (endX - startX) * (i / steps);
+      const y = startY + (endY - startY) * (i / steps);
+      await page.mouse.move(x, y);
+    }
+    await page.mouse.move(endX, endY, { steps: 10 });
+
+    await expect(page.locator('#pod-2')).toHaveCSS('cursor', 'not-allowed');
+
+    // Release away from the invalid target so the drag reverts cleanly.
+    await page.mouse.up();
+    await expect(page.locator('#pod-2 .pod-player', { hasText: 'Alice' })).toHaveCount(0);
+  });
 });

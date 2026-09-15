@@ -8,7 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { DragDropModule, CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { EventDto, PodDto, PodPlayer, GameResultSubmit } from '../../core/models/api.models';
 import { EventService } from '../../core/services/event.service';
 import { PodTimerComponent } from '../../shared/components/pod-timer.component';
@@ -44,12 +44,16 @@ export interface PodResultState {
           </app-pod-timer>
 
           <div class="pod-players-list"
+               [class.dragging-active]="dragActive"
                cdkDropList
                [id]="'pod-' + pod.podId"
                [cdkDropListData]="pod.podId"
+               [cdkDropListEnterPredicate]="canAcceptPlayer"
                (cdkDropListDropped)="onPlayerDropped($event)">
             @for (player of pod.players; track player.playerId) {
-              <div class="pod-player" cdkDrag [cdkDragData]="player">
+              <div class="pod-player draggable" cdkDrag [cdkDragData]="player"
+                   (cdkDragStarted)="dragStarted.emit()"
+                   (cdkDragEnded)="dragEnded.emit()">
                 <span class="seat-number">{{ player.seatOrder }}.</span>
                 <span>{{ player.name }}</span>
               </div>
@@ -153,6 +157,11 @@ export interface PodResultState {
     .winner-badge { font-size: 0.75rem; }
     .draw-badge { font-size: 0.75rem; background-color: #ff9800 !important; color: white !important; }
     .loss-badge { font-size: 0.75rem; background-color: #9e9e9e !important; color: white !important; }
+    .pod-player.draggable { cursor: grab; }
+    .pod-player.draggable.cdk-drag-dragging { cursor: grabbing; }
+    .pod-players-list.dragging-active { cursor: not-allowed; }
+    .pod-players-list.dragging-active.cdk-drop-list-dragging,
+    .pod-players-list.dragging-active.cdk-drop-list-receiving { cursor: grabbing; }
   `]
 })
 export class PodCardComponent {
@@ -161,8 +170,11 @@ export class PodCardComponent {
   @Input() eventId!: number;
   @Input() podState!: PodResultState;
   @Input() isStoreEmployee = false;
+  @Input() dragActive = false;
   @Output() stateChanged = new EventEmitter<void>();
   @Output() playerDropped = new EventEmitter<{ playerId: number; sourcePodId: number; targetPodId: number }>();
+  @Output() dragStarted = new EventEmitter<void>();
+  @Output() dragEnded = new EventEmitter<void>();
 
   @ViewChild('podTimerRef') private podTimer?: PodTimerComponent;
 
@@ -181,6 +193,11 @@ export class PodCardComponent {
   pauseTimer() { this.podTimer?.pause(); }
   resumeTimer() { this.podTimer?.resume(); }
   addTime(seconds: number) { this.podTimer?.addTime(seconds); }
+
+  /** Blocks a cross-pod drop once this pod is already at max capacity (5 players). */
+  canAcceptPlayer = (_drag: CdkDrag<PodPlayer>, _drop: CdkDropList<number>): boolean => {
+    return this.pod.players.length < 5;
+  };
 
   onPlayerDropped(event: CdkDragDrop<number>) {
     const sourcePodId = event.previousContainer.data;

@@ -304,6 +304,25 @@ describe('EventDetailComponent', () => {
     });
   });
 
+  describe('onDragStarted / onDragEnded (pod-card drag cursor state)', () => {
+    it('sets draggingPlayerActive to true on onDragStarted', async () => {
+      await setup();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.onDragStarted();
+      expect(fixture.componentInstance.draggingPlayerActive).toBe(true);
+    });
+
+    it('sets draggingPlayerActive to false on onDragEnded', async () => {
+      await setup();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.onDragStarted();
+      fixture.componentInstance.onDragEnded();
+      expect(fixture.componentInstance.draggingPlayerActive).toBe(false);
+    });
+  });
+
   it('populates event from currentEvent$ subscription', async () => {
     await setup();
     const fixture = TestBed.createComponent(EventDetailComponent);

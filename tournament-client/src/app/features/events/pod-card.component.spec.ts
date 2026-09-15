@@ -510,6 +510,46 @@ describe('PodCardComponent', () => {
     });
   });
 
+  // ─── canAcceptPlayer (drop-list capacity gate) ───────────────────────────
+
+  describe('canAcceptPlayer()', () => {
+    it('returns true when the pod has fewer than 5 players', () => {
+      component.pod = makePod(); // 4 players
+      expect(component.canAcceptPlayer({} as any, {} as any)).toBe(true);
+    });
+
+    it('returns false when the pod already has 5 players', () => {
+      component.pod = makePod({
+        players: [
+          { playerId: 1, name: 'A', seatOrder: 1 },
+          { playerId: 2, name: 'B', seatOrder: 2 },
+          { playerId: 3, name: 'C', seatOrder: 3 },
+          { playerId: 4, name: 'D', seatOrder: 4 },
+          { playerId: 5, name: 'E', seatOrder: 5 },
+        ],
+      } as Partial<PodDto>);
+      expect(component.canAcceptPlayer({} as any, {} as any)).toBe(false);
+    });
+  });
+
+  // ─── dragActive input — cursor state class ───────────────────────────────
+
+  describe('dragActive input', () => {
+    it('applies "dragging-active" class to the drop list when true', () => {
+      component.dragActive = true;
+      fixture.detectChanges();
+      const dropList = fixture.nativeElement.querySelector('.pod-players-list');
+      expect(dropList.classList.contains('dragging-active')).toBe(true);
+    });
+
+    it('does not apply "dragging-active" when false', () => {
+      component.dragActive = false;
+      fixture.detectChanges();
+      const dropList = fixture.nativeElement.querySelector('.pod-players-list');
+      expect(dropList.classList.contains('dragging-active')).toBe(false);
+    });
+  });
+
   // ─── buildDefaultResult (via submitPodResult) ────────────────────────────
 
   describe('buildDefaultResult (verified through submitPodResult)', () => {
